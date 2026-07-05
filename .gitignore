@@ -1,0 +1,62 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Yarn 4 (Berry) — avec nodeLinker: node-modules
+# On garde yarn.lock et .yarnrc.yml dans git, on ignore le reste.
+# Patterns avec **/ pour matcher à n'importe quelle profondeur (poc/.yarn/ etc.)
+**/.yarn/*
+!**/.yarn/patches
+!**/.yarn/plugins
+!**/.yarn/releases
+!**/.yarn/sdks
+!**/.yarn/versions
+**/.pnp.*
+
+# TypeScript build
+dist/
+build/
+*.tsbuildinfo
+
+# Vite build output
+ui/dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local data (Docker volumes handle persistence)
+mosquitto/data/
+mosquitto/log/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Claude Code local settings
+.claude/
+
+# BMAD (local AI agent tooling — not part of the project)
+_bmad/
+_bmad-output/
+
+# Local config et données runtime
+# Anchored at root so addon/zigbee-tunes/config.yaml (HA add-on metadata) is tracked.
+/config.yaml
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

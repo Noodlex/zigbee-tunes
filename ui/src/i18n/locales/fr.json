@@ -1,0 +1,137 @@
+{
+  "app": {
+    "subtitle": "Z2M Discovery Manager"
+  },
+  "nav": {
+    "devices": "Appareils",
+    "customizations": "Personnalisations",
+    "dashboard": "Tableau de bord"
+  },
+  "common": {
+    "group_badge": "groupe",
+    "group_badge_title": "Groupe Zigbee2MQTT — entité virtuelle qui pilote plusieurs ampoules réelles",
+    "refresh": "Rafraîchir",
+    "cancel": "Annuler",
+    "remove": "Retirer",
+    "error_prefix": "Erreur : {message}",
+    "failure_prefix": "Échec : {message}",
+    "unknown": "—"
+  },
+  "theme": {
+    "tooltip": "Thème : {pref}",
+    "dark": "Sombre",
+    "light": "Clair",
+    "auto": "Auto (système)"
+  },
+  "language": {
+    "tooltip": "Langue : {locale}",
+    "en": "English",
+    "fr": "Français"
+  },
+  "devices": {
+    "title": "Appareils ({filtered} / {total})",
+    "select_all_filtered": "Tout sélectionner (filtré)",
+    "empty_filtered": "Aucun appareil ne correspond aux filtres",
+    "filter": {
+      "search_placeholder": "Rechercher nom, IEEE, modèle...",
+      "vendor_placeholder": "Filtrer par fabricant...",
+      "modified_only": "Modifiés uniquement",
+      "hide_no_caps": "Masquer sans capacité",
+      "capabilities_label": "Capacités :",
+      "and": "ET (toutes)",
+      "or": "OU (au moins une)",
+      "show_all": "✕ Tout afficher"
+    },
+    "apply_success": "{count} règle(s) appliquée(s) à {devices} appareil(s) — {republished} payloads republiés",
+    "reset_success_deleted": "Règle {type} supprimée — {republished} payloads republiés",
+    "reset_success_partial": "Configuration retirée pour cet appareil — {republished} payloads republiés"
+  },
+  "card": {
+    "badge_title": "Cliquer pour voir/gérer la configuration spécifique",
+    "popover_title": "Configuration spécifique à cet appareil",
+    "popover_remove_title": "Retirer {type} pour cet appareil",
+    "popover_hint": "Le ✕ retire la règle pour CET appareil uniquement.",
+    "capability_modified_title": "{capability} est actuellement modifié par une règle Zigbee Tunes"
+  },
+  "panel": {
+    "selected": "{count} appareil(s) sélectionné(s)",
+    "deselect_all": "Tout désélectionner",
+    "rule_color_temp_range": "color-temp-range",
+    "rule_brightness_range": "brightness-range",
+    "rule_suggested_area": "suggested-area",
+    "rule_entity_rename": "entity-rename",
+    "field_min": "min",
+    "field_max": "max",
+    "field_max_scale": "max_scale",
+    "field_brightness_max": "{value} max",
+    "field_brightness_hint": "(254 = pas de limite)",
+    "area_placeholder": "ex : Salon",
+    "device_name_placeholder": "Nom affiché HA",
+    "mireds_placeholder": "mireds",
+    "scale_placeholder": "1-254",
+    "conflicts_header": "{count} règle(s) existante(s) à écraser",
+    "apply_button": "Appliquer à {count} appareil(s)",
+    "cct_native_range": "natif des appareils : {low} → {high}",
+    "cct_safe_intersection": "intersection sûre : {min} → {max}",
+    "cct_missing_data": "{count} appareil(s) sans donnée native (Z2M doit publier sur z2m_discovery)"
+  },
+  "customizations": {
+    "title": "Personnalisations",
+    "description": "Une ligne par règle de configuration spécifique appliquée à un appareil. Le bouton ✕ retire la règle pour cet appareil uniquement (la règle est entièrement supprimée si elle ne ciblait que cet appareil). La règle globale (ex. {targetsAll}) reste active en arrière-plan.",
+    "search_placeholder": "Rechercher nom, IEEE, fabricant, modèle, type, configuration...",
+    "empty": "Aucun appareil avec configuration personnalisée",
+    "remove_button": "✕ Retirer",
+    "remove_title": "Retirer {type} pour {device}"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "status": {
+      "mqtt": "MQTT",
+      "connected": "connecté",
+      "disconnected": "déconnecté",
+      "reconnects": "{count} reconnexion(s)",
+      "devices_label": "Appareils",
+      "devices_with_custom": "dont {count} avec une config personnalisée",
+      "uptime_label": "Temps d'activité",
+      "last_reconnect": "dernière reconnexion {when}",
+      "no_reconnect": "aucune reconnexion"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "empty": "Aucune transformation récente"
+    },
+    "breakdown": {
+      "vendor_title": "Appareils par fabricant",
+      "capability_title": "Appareils par capacité",
+      "filter_hint": "Filtrer les appareils par {value}"
+    }
+  },
+  "rules": {
+    "label_min": "min",
+    "label_max": "max",
+    "label_area": "zone",
+    "label_name": "nom",
+    "label_max_scale": "max_scale"
+  },
+  "connection": {
+    "mqtt_broker": "Broker MQTT",
+    "zigbee2mqtt": "Zigbee2MQTT",
+    "home_assistant": "Home Assistant",
+    "status_online": "en ligne",
+    "status_offline": "hors ligne",
+    "status_unknown": "aucun statut reçu pour l'instant",
+    "status_connected": "connecté",
+    "status_disconnected": "déconnecté",
+    "last_update": "dernier changement d'état {when}",
+    "no_heartbeat_hint": "HA et Z2M ne publient qu'au démarrage et à l'arrêt — un timestamp ancien ne veut pas dire que le service est en panne. La pastille reste fiable grâce au Last Will MQTT."
+  },
+  "time": {
+    "uptime_days": "{days}j {hours}h",
+    "uptime_hours": "{hours}h {minutes}m",
+    "uptime_minutes": "{minutes}m {seconds}s",
+    "relative_seconds": "il y a {seconds}s",
+    "relative_minutes": "il y a {minutes} min",
+    "relative_hours": "il y a {hours} h",
+    "relative_days": "il y a {days} j"
+  }
+}

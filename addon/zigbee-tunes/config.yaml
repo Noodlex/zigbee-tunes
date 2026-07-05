@@ -1,0 +1,57 @@
+---
+# Home Assistant add-on metadata. Documentation:
+# https://developers.home-assistant.io/docs/add-ons/configuration/
+
+name: Zigbee Tunes
+slug: zigbee-tunes
+description: >-
+  Z2M Discovery Manager — normalize Zigbee2MQTT discovery payloads before they
+  reach Home Assistant. Tweak color-temp / brightness ranges, rename devices,
+  auto-assign areas, all from a web UI.
+version: "1.0.0"
+url: https://github.com/Noodlex/zigbee-tunes
+arch:
+  - amd64
+  - aarch64
+init: false
+boot: auto
+startup: services
+stage: stable
+
+# We need MQTT credentials. `need` = HA refuses to start the add-on if no
+# MQTT broker is configured (sane default — Zigbee Tunes is useless without it).
+services:
+  - mqtt:need
+
+# Ingress: expose the UI through the HA sidebar without exposing a port.
+# Zigbee Tunes listens on 8099 internally; Supervisor proxies /api/hassio_ingress/...
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:tune
+panel_title: Zigbee Tunes
+panel_admin: true
+
+# Optional direct port exposure on the host network (handy for local API
+# scripts / curl during dev). Comment out to lock to ingress-only.
+ports:
+  "8099/tcp": null
+ports_description:
+  "8099/tcp": "Web UI + REST API (optional — ingress works without this)"
+
+# /data is persisted across restarts: that's where SQLite lives.
+# /share is shared with other add-ons (we don't use it, declared for future).
+map:
+  - data:rw
+
+# User-facing options. Bashio injects them as env vars in run.sh.
+options:
+  log_level: info
+  topics_source: z2m_discovery
+  topics_target: homeassistant
+  topics_z2m_base: zigbee2mqtt
+
+schema:
+  log_level: list(debug|info|warn|error)
+  topics_source: str
+  topics_target: str
+  topics_z2m_base: str

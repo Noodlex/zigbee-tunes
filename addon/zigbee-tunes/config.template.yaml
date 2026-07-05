@@ -1,0 +1,30 @@
+# Zigbee Tunes config template — used by the HA Add-on entrypoint.
+# Values come from /data/options.json and the MQTT service injected by HA.
+# run.sh exports them as env vars; Zigbee Tunes expands ${VAR} at load time.
+
+broker:
+  url: ${MQTT_URL}
+  username: ${MQTT_USERNAME:-}
+  password: ${MQTT_PASSWORD:-}
+  client_id: zigbee-tunes
+
+topics:
+  source: ${TOPICS_SOURCE:-z2m_discovery}
+  target: ${TOPICS_TARGET:-homeassistant}
+  z2m_base: ${TOPICS_Z2M_BASE:-zigbee2mqtt}
+
+database:
+  # Persisted across add-on restarts via the `data:rw` map entry.
+  path: /data/zigbee-tunes.db
+
+api:
+  # Bind on all interfaces inside the container: HA Supervisor reaches us
+  # over the internal Docker network for ingress.
+  host: 0.0.0.0
+  port: 8099
+
+log_level: ${LOG_LEVEL:-info}
+
+# Empty by default. Rules are managed from the web UI and persisted in
+# /data/zigbee-tunes.db, so a fresh install starts with no transformations.
+transformers: []

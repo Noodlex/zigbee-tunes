@@ -1,0 +1,92 @@
+# Zigbee Tunes — example configuration
+# Copy this file to `config.yaml` (gitignored), then adapt the values.
+
+broker:
+  # MQTT broker URL. For a real HA setup: mqtt://<pi_ip>:1883
+  url: ${MQTT_URL:-mqtt://localhost:1883}
+  username: ${MQTT_USERNAME:-}
+  password: ${MQTT_PASSWORD:-}
+  client_id: zigbee-tunes
+
+topics:
+  # Source topic: where Z2M publishes (reconfigure Z2M with
+  # homeassistant.discovery_topic = z2m_discovery).
+  source: z2m_discovery
+  # Target topic: where HA listens (keep "homeassistant" by default).
+  target: homeassistant
+  # Z2M base topic (used to subscribe to bridge/devices).
+  z2m_base: zigbee2mqtt
+
+database:
+  # SQLite file path. Created automatically on first start.
+  path: ./data/zigbee-tunes.db
+
+api:
+  # Listening address for the REST API + web UI.
+  # Default (if the line is absent): 127.0.0.1 — accessible only from the
+  # machine that hosts Zigbee Tunes. Safe by default (no auth yet). Set to
+  # 0.0.0.0 to allow access from other machines on the LAN, keeping in
+  # mind there's currently no authentication.
+  host: 127.0.0.1
+  port: 8099
+
+log_level: info  # debug | info | warn | error
+
+# Transformation rules. Each rule has:
+# - type: the transformer type
+#     color-temp-range   -> clamp min_mireds / max_mireds
+#     brightness-range   -> cap brightness_scale
+#     suggested-area     -> add device.suggested_area (HA assigns the area)
+#     entity-rename      -> override device.name (HA display name, safe)
+# - targets: list of patterns to match devices
+#     "*"                       -> the whole fleet
+#     "<ieee>"                  -> a specific device
+#     "@vendor:<name>"          -> every device from a vendor
+#     "@group:<name>"           -> every device in a Z2M group
+#     "@model:<model_id>"       -> every device with an exact model_id
+#     "@friendlyname:<pattern>" -> by friendly_name, trailing "*" = prefix
+#                                  e.g. "@friendlyname:Salon*" matches
+#                                  "Salon", "Salon 1", etc.
+# - priority: integer. Higher = more specific. The highest-priority rule
+#   matching a device wins (per transformer type).
+# - type-specific parameters
+
+transformers:
+  # === color-temp-range: normalize CCT ranges ===
+
+  # Global rule: honest intersection of the fleet (250-454 mireds = 2200-4000K).
+  - type: color-temp-range
+    targets: ["*"]
+    min_mireds: 250
+    max_mireds: 454
+    priority: 10
+
+  # Example: let the Innr bulbs go cooler (down to 5000K):
+  # - type: color-temp-range
+  #   targets: ["@vendor:Innr"]
+  #   min_mireds: 200
+  #   max_mireds: 454
+  #   priority: 20
+
+  # Example: a specific device limited to 2000K-3000K (e.g. an ambient LED strip):
+  # - type: color-temp-range
+  #   targets: ["0xa4c138c6ef7b4149"]
+  #   min_mireds: 333    # 3000K — block anything colder
+  #   max_mireds: 500    # 2000K — allow the warmest
+  #   priority: 30
+
+  # === suggested-area: auto-assign devices to HA areas ===
+
+  # Example: every "Salon N" device -> area "Salon"
+  # - type: suggested-area
+  #   targets: ["@friendlyname:Salon*"]
+  #   area: "Salon"
+  #   priority: 10
+
+  # === entity-rename: override the HA display name (does not break entity_ids) ===
+
+  # Example: rename a device for HA display:
+  # - type: entity-rename
+  #   targets: ["0xa4c138c6ef7b4149"]
+  #   device_name: "Claustra LED strip"
+  #   priority: 10

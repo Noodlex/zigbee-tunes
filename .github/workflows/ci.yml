@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24 matches the Docker images and the standalone runtime.
+      # node:sqlite (used by the DB layer and its tests) is flagless here.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack (pinned Yarn 4)
+        run: corepack enable
+
+      # ---- Backend ----
+      - name: Install backend deps
+        run: yarn install --immutable
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Test
+        run: yarn test
+
+      - name: Build backend
+        run: yarn build
+
+      # ---- UI (separate package, its own lockfile) ----
+      - name: Install UI deps
+        run: yarn install --immutable
+        working-directory: ui
+
+      - name: Build UI
+        run: yarn build
+        working-directory: ui

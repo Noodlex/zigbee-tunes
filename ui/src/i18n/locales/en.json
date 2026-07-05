@@ -1,0 +1,137 @@
+{
+  "app": {
+    "subtitle": "Z2M Discovery Manager"
+  },
+  "nav": {
+    "devices": "Devices",
+    "customizations": "Customizations",
+    "dashboard": "Dashboard"
+  },
+  "common": {
+    "group_badge": "group",
+    "group_badge_title": "Zigbee2MQTT group — virtual entity that pilots several real bulbs",
+    "refresh": "Refresh",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "error_prefix": "Error: {message}",
+    "failure_prefix": "Failed: {message}",
+    "unknown": "—"
+  },
+  "theme": {
+    "tooltip": "Theme: {pref}",
+    "dark": "Dark",
+    "light": "Light",
+    "auto": "Auto (system)"
+  },
+  "language": {
+    "tooltip": "Language: {locale}",
+    "en": "English",
+    "fr": "Français"
+  },
+  "devices": {
+    "title": "Devices ({filtered} / {total})",
+    "select_all_filtered": "Select all (filtered)",
+    "empty_filtered": "No device matches the filters",
+    "filter": {
+      "search_placeholder": "Search name, IEEE, model...",
+      "vendor_placeholder": "Filter by vendor...",
+      "modified_only": "Modified only",
+      "hide_no_caps": "Hide without capabilities",
+      "capabilities_label": "Capabilities:",
+      "and": "AND (all)",
+      "or": "OR (at least one)",
+      "show_all": "✕ Show all"
+    },
+    "apply_success": "{count} rule(s) applied to {devices} device(s) — {republished} payloads republished",
+    "reset_success_deleted": "Rule {type} deleted — {republished} payloads republished",
+    "reset_success_partial": "Configuration removed for this device — {republished} payloads republished"
+  },
+  "card": {
+    "badge_title": "Click to view/manage the specific configuration",
+    "popover_title": "Configuration specific to this device",
+    "popover_remove_title": "Remove {type} for this device",
+    "popover_hint": "The ✕ removes the rule for THIS device only.",
+    "capability_modified_title": "{capability} is currently overridden by a Zigbee Tunes rule"
+  },
+  "panel": {
+    "selected": "{count} device(s) selected",
+    "deselect_all": "Deselect all",
+    "rule_color_temp_range": "color-temp-range",
+    "rule_brightness_range": "brightness-range",
+    "rule_suggested_area": "suggested-area",
+    "rule_entity_rename": "entity-rename",
+    "field_min": "min",
+    "field_max": "max",
+    "field_max_scale": "max_scale",
+    "field_brightness_max": "{value} max",
+    "field_brightness_hint": "(254 = no limit)",
+    "area_placeholder": "e.g. Living room",
+    "device_name_placeholder": "HA display name",
+    "mireds_placeholder": "mireds",
+    "scale_placeholder": "1-254",
+    "conflicts_header": "{count} existing rule(s) will be overwritten",
+    "apply_button": "Apply to {count} device(s)",
+    "cct_native_range": "device native: {low} → {high}",
+    "cct_safe_intersection": "safe intersection: {min} → {max}",
+    "cct_missing_data": "{count} device(s) without native data (Z2M must publish on z2m_discovery)"
+  },
+  "customizations": {
+    "title": "Customizations",
+    "description": "One row per specific configuration rule applied to a device. The ✕ button removes the rule for this device only (the rule is fully deleted if it only targeted this device). The global rule (e.g. {targetsAll}) keeps running in the background.",
+    "search_placeholder": "Search name, IEEE, vendor, model, type, configuration...",
+    "empty": "No device with a custom configuration",
+    "remove_button": "✕ Remove",
+    "remove_title": "Remove {type} for {device}"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "status": {
+      "mqtt": "MQTT",
+      "connected": "connected",
+      "disconnected": "disconnected",
+      "reconnects": "{count} reconnect(s)",
+      "devices_label": "Devices",
+      "devices_with_custom": "including {count} with a custom config",
+      "uptime_label": "Uptime",
+      "last_reconnect": "last reconnect {when}",
+      "no_reconnect": "no reconnection"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No recent transformation"
+    },
+    "breakdown": {
+      "vendor_title": "Devices by vendor",
+      "capability_title": "Devices by capability",
+      "filter_hint": "Filter devices by {value}"
+    }
+  },
+  "rules": {
+    "label_min": "min",
+    "label_max": "max",
+    "label_area": "area",
+    "label_name": "name",
+    "label_max_scale": "max_scale"
+  },
+  "connection": {
+    "mqtt_broker": "MQTT broker",
+    "zigbee2mqtt": "Zigbee2MQTT",
+    "home_assistant": "Home Assistant",
+    "status_online": "online",
+    "status_offline": "offline",
+    "status_unknown": "no status received yet",
+    "status_connected": "connected",
+    "status_disconnected": "disconnected",
+    "last_update": "last state change {when}",
+    "no_heartbeat_hint": "HA and Z2M only publish on startup/shutdown — a stale timestamp does not mean the service is down. The dot stays accurate via MQTT Last Will."
+  },
+  "time": {
+    "uptime_days": "{days}d {hours}h",
+    "uptime_hours": "{hours}h {minutes}m",
+    "uptime_minutes": "{minutes}m {seconds}s",
+    "relative_seconds": "{seconds}s ago",
+    "relative_minutes": "{minutes} min ago",
+    "relative_hours": "{hours} h ago",
+    "relative_days": "{days} d ago"
+  }
+}
