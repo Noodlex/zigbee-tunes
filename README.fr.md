@@ -17,11 +17,9 @@ luminosité, renommer des appareils, assigner des pièces — puis les
 republie. Home Assistant obtient une **vue cohérente et harmonisée** d'un
 parc multi-marques, sans jamais modifier tes appareils Zigbee physiques.
 
-<!-- HERO SCREENSHOT — add docs/screenshots/devices.png, then uncomment:
 <p align="center">
-  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — vue Devices" width="800">
+  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — vue Devices" width="820">
 </p>
--->
 
 ## Pourquoi
 
@@ -53,11 +51,13 @@ pas tes appareils et n'est pas un moteur d'automatisation.
 - **Fiable** — cache de discovery par topic : un changement de règle
   atteint la bonne entité sans attendre un redémarrage de Z2M.
 
-<!-- SCREENSHOT — add docs/screenshots/edit.png, then uncomment:
 <p align="center">
-  <img src="docs/screenshots/edit.png" alt="Édition groupée de la température de couleur avec les plages natives" width="800">
+  <img src="docs/screenshots/edit.png" alt="Édition groupée de la température de couleur avec les plages natives" width="820">
 </p>
--->
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Zigbee Tunes — Dashboard : statut de connexion, activité récente, répartition du parc" width="820">
+</p>
 
 ## Installation
 

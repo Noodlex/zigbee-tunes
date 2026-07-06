@@ -17,11 +17,9 @@ devices, assign areas — and republishes them. Home Assistant ends up with
 a **consistent, harmonized view** of a mixed-brand fleet, while your
 physical Zigbee devices are never modified.
 
-<!-- HERO SCREENSHOT — add docs/screenshots/devices.png, then uncomment:
 <p align="center">
-  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — Devices view" width="800">
+  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — Devices view" width="820">
 </p>
--->
 
 ## Why
 
@@ -51,11 +49,13 @@ automation engine.
 - **Reliable** — per-topic discovery cache so a rule change reaches the
   right entity without waiting for a Z2M restart.
 
-<!-- SCREENSHOT — add docs/screenshots/edit.png, then uncomment:
 <p align="center">
-  <img src="docs/screenshots/edit.png" alt="Bulk-editing color temperature with native-range hints" width="800">
+  <img src="docs/screenshots/edit.png" alt="Bulk-editing color temperature with native-range hints" width="820">
 </p>
--->
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Zigbee Tunes — Dashboard: connection status, recent activity, fleet breakdown" width="820">
+</p>
 
 ## Install
 
