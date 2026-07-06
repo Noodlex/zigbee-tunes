@@ -9,7 +9,7 @@
 
 > Other languages: [English](README.md)
 
-Zigbee Tunes est un petit add-on Home Assistant qui s'interpose **entre
+Zigbee Tunes est une petite app Home Assistant qui s'interpose **entre
 Zigbee2MQTT et Home Assistant** sur le canal MQTT Discovery. Il intercepte
 les payloads de découverte publiés par Z2M, applique les transformations
 que tu définis — borner les plages de température de couleur, plafonner la
@@ -57,19 +57,20 @@ pas tes appareils et n'est pas un moteur d'automatisation.
 
 ## Installation
 
-### Comme add-on Home Assistant (recommandé)
+### Comme app Home Assistant (recommandé)
 
-[![Ouvre ton instance Home Assistant et affiche la boîte de dialogue d'ajout de dépôt d'add-on avec l'URL pré-remplie.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FNoodlex%2Fzigbee-tunes)
+[![Ouvre ton instance Home Assistant et affiche la boîte de dialogue d'ajout de dépôt avec l'URL pré-remplie.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FNoodlex%2Fzigbee-tunes)
 
-1. Clique le bouton ci-dessus (ou **Paramètres → Modules complémentaires →
-   Boutique → ⋮ → Dépôts** et colle `https://github.com/Noodlex/zigbee-tunes`).
-2. Installe **Zigbee Tunes** depuis la boutique.
+1. Clique le bouton ci-dessus (ou, dans Home Assistant, ouvre
+   **Paramètres → Apps**, puis le menu **⋮** → **Dépôts**, et colle
+   `https://github.com/Noodlex/zigbee-tunes`).
+2. Ouvre la boutique et installe **Zigbee Tunes**.
 3. Assure-toi qu'un broker MQTT (ex. **Mosquitto broker**) tourne.
 4. Fais pointer Z2M sur un topic de discovery séparé (voir
    [Configuration](#configuration)), redémarre Z2M, puis démarre Zigbee
    Tunes. L'UI apparaît dans la sidebar HA.
 
-Nécessite **Home Assistant OS** ou **Supervised** (les add-ons ont besoin
+Nécessite **Home Assistant OS** ou **Supervised** (les apps ont besoin
 du Supervisor). Architectures : `amd64`, `aarch64`.
 
 ### Standalone (Docker)
@@ -127,8 +128,8 @@ retained passent par Zigbee Tunes.
 
 ## Documentation
 
-- [Docs de l'add-on](addon/zigbee-tunes/DOCS.md) — options, usage, stockage
-- [README de l'add-on](addon/zigbee-tunes/README.md) — détails d'installation
+- [Docs de l'app](addon/zigbee-tunes/DOCS.md) — options, usage, stockage
+- [README de l'app](addon/zigbee-tunes/README.md) — détails d'installation
 - [CONTRIBUTING](CONTRIBUTING.md) — setup dev et conventions
 - [SECURITY](SECURITY.md) — modèle de confiance et signalement
 

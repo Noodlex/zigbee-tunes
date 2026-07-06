@@ -38,5 +38,5 @@ in HA without touching the physical devices.
 - Node.js + TypeScript backend (Fastify, built-in `node:sqlite`), 81 tests
 
 ### Packaging
-- Home Assistant add-on (amd64, aarch64) with Ingress
+- Home Assistant app (amd64, aarch64) with Ingress
 - Standalone Docker image

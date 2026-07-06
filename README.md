@@ -9,7 +9,7 @@
 
 > Other languages: [Français](README.fr.md)
 
-Zigbee Tunes is a small Home Assistant add-on that sits **between
+Zigbee Tunes is a small Home Assistant app that sits **between
 Zigbee2MQTT and Home Assistant** on the MQTT Discovery channel. It
 intercepts the discovery payloads Z2M publishes, applies transformations
 you define — clamp color-temperature ranges, cap brightness, rename
@@ -55,18 +55,19 @@ automation engine.
 
 ## Install
 
-### As a Home Assistant add-on (recommended)
+### As a Home Assistant app (recommended)
 
-[![Open your Home Assistant instance and show the add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FNoodlex%2Fzigbee-tunes)
+[![Open your Home Assistant instance and show the repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FNoodlex%2Fzigbee-tunes)
 
-1. Click the button above (or **Settings → Add-ons → Add-on Store →
-   ⋮ → Repositories** and paste `https://github.com/Noodlex/zigbee-tunes`).
-2. Install **Zigbee Tunes** from the store.
-3. Make sure an MQTT broker add-on (e.g. **Mosquitto broker**) is running.
+1. Click the button above (or in Home Assistant open **Settings → Apps**,
+   then the **⋮** menu → **Repositories**, and paste
+   `https://github.com/Noodlex/zigbee-tunes`).
+2. Open the store and install **Zigbee Tunes**.
+3. Make sure an MQTT broker app (e.g. **Mosquitto broker**) is running.
 4. Point Z2M at a separate discovery topic (see [Configuration](#configuration)),
    restart Z2M, then start Zigbee Tunes. The UI appears in the HA sidebar.
 
-Requires **Home Assistant OS** or **Supervised** (add-ons need the
+Requires **Home Assistant OS** or **Supervised** (apps need the
 Supervisor). Architectures: `amd64`, `aarch64`.
 
 ### Standalone (Docker)
@@ -124,8 +125,8 @@ Tunes.
 
 ## Documentation
 
-- [Add-on docs](addon/zigbee-tunes/DOCS.md) — options, usage, storage
-- [Add-on README](addon/zigbee-tunes/README.md) — install details
+- [App docs](addon/zigbee-tunes/DOCS.md) — options, usage, storage
+- [App README](addon/zigbee-tunes/README.md) — install details
 - [CONTRIBUTING](CONTRIBUTING.md) — dev setup and conventions
 - [SECURITY](SECURITY.md) — trust model and reporting
 

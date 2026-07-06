@@ -14,7 +14,7 @@ Common use cases:
 
 ## First-time setup
 
-1. Make sure an MQTT broker add-on is running.
+1. Make sure an MQTT broker app is running.
 2. Configure Z2M to use a separate discovery topic:
    ```yaml
    # /share/zigbee2mqtt/configuration.yaml
@@ -35,10 +35,10 @@ Open the **Zigbee Tunes** panel from the sidebar:
 - **Dashboard**: fleet stats, MQTT/Z2M/HA connection status, recent
   transformation activity.
 
-Rules are stored in `/data/zigbee-tunes.db` and survive add-on restarts and
+Rules are stored in `/data/zigbee-tunes.db` and survive app restarts and
 upgrades.
 
 ## Logs
 
-Set `log_level: debug` in the add-on options to see every payload Zigbee Tunes
+Set `log_level: debug` in the app options to see every payload Zigbee Tunes
 processes (heavy — usually only useful during initial setup).

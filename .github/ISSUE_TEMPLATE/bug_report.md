@@ -17,12 +17,12 @@ What you expected to happen instead.
 
 **Environment**
 - Zigbee Tunes version:
-- Install type: [ ] HA add-on (HA OS / Supervised)  [ ] standalone Docker
-- Home Assistant version (if add-on):
+- Install type: [ ] HA app (HA OS / Supervised)  [ ] standalone Docker
+- Home Assistant version (if HA app):
 - Zigbee2MQTT version:
 
 **Logs**
-Relevant Zigbee Tunes logs (Add-on → Logs, or `docker compose logs`). Set
+Relevant Zigbee Tunes logs (Apps → Zigbee Tunes → Logs, or `docker compose logs`). Set
 `log_level: debug` if needed. Please redact broker credentials / IPs.
 
 ```

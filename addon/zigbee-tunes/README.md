@@ -1,18 +1,18 @@
-# Zigbee Tunes — Home Assistant Add-on
+# Zigbee Tunes — Home Assistant App
 
-Z2M Discovery Manager packaged as a Home Assistant add-on.
+Z2M Discovery Manager packaged as a Home Assistant app.
 
 ## Install (HA OS / Supervised)
 
-1. Open **Settings → Add-ons → Add-on Store** in Home Assistant.
-2. Top-right menu → **Repositories** → paste the repo URL:
+1. Open **Settings → Apps** in Home Assistant.
+2. Top-right **⋮** menu → **Repositories** → paste the repo URL:
    `https://github.com/Noodlex/zigbee-tunes`
-3. Refresh the store. The **Zigbee Tunes Add-ons** section appears.
+3. Refresh the store. The **Zigbee Tunes** section appears.
 4. Click **Zigbee Tunes** → **Install**.
 
 Requirements:
 
-- An MQTT broker add-on (e.g. **Mosquitto broker**) installed and started.
+- An MQTT broker app (e.g. **Mosquitto broker**) installed and started.
 - Zigbee2MQTT configured with `homeassistant.discovery_topic: z2m_discovery`
   (so Zigbee Tunes intercepts payloads before HA sees them on `homeassistant/...`).
 
@@ -34,7 +34,7 @@ are managed through the **Zigbee Tunes UI**, reachable from the HA sidebar
 ## Storage
 
 - `/data/zigbee-tunes.db` — SQLite database (rules, applied logs). Persisted
-  across add-on restarts/upgrades.
+  across app restarts/upgrades.
 
 ## Update Z2M config
 

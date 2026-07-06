@@ -8,7 +8,7 @@ it:
 
 - **The web UI and REST API have no authentication of their own.** This
   is by design:
-  - As a **Home Assistant add-on**, the UI is reached through HA
+  - As a **Home Assistant app**, the UI is reached through HA
     **Ingress**, which is authenticated by Home Assistant. The internal
     port is not published to the host network by default.
   - In **standalone** mode, the API binds to `127.0.0.1` (loopback)
@@ -26,7 +26,7 @@ it:
 - **Data at rest** is limited to device metadata and your transformation
   rules, stored in a local SQLite database. No credentials are persisted
   by the application; the MQTT broker credentials live only in the
-  config file / add-on options you provide.
+  config file / app options you provide.
 
 If you need the API reachable beyond loopback, put it behind a
 reverse proxy that adds authentication and TLS.

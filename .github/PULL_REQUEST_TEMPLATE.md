@@ -11,7 +11,7 @@ issue (`Fixes #123`).
 - [ ] `yarn test` passes (added/updated tests where relevant)
 - [ ] UI strings, if any, added to **both** `en.json` and `fr.json`
 - [ ] Code and comments in English; no unrelated reformatting
-- [ ] If this ships a user-visible change, the add-on version + CHANGELOG
+- [ ] If this ships a user-visible change, the app version + CHANGELOG
       are bumped (see `CONTRIBUTING.md`)
 
 ## Notes for the reviewer
