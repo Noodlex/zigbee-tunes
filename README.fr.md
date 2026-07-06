@@ -55,10 +55,6 @@ pas tes appareils et n'est pas un moteur d'automatisation.
   <img src="docs/screenshots/edit.png" alt="Édition groupée de la température de couleur avec les plages natives" width="820">
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Zigbee Tunes — Dashboard : statut de connexion, activité récente, répartition du parc" width="820">
-</p>
-
 ## Installation
 
 ### Comme add-on Home Assistant (recommandé)
@@ -124,6 +120,10 @@ Zigbee2MQTT ──publie──►  Broker MQTT  (z2m_discovery/*)
 L'**état et les commandes des appareils ne sont pas touchés** — ils
 transitent directement Z2M ↔ HA. Seuls les payloads MQTT Discovery (config)
 retained passent par Zigbee Tunes.
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Zigbee Tunes — Dashboard : statut de connexion, activité récente, répartition du parc" width="820">
+</p>
 
 ## Documentation
 

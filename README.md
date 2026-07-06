@@ -53,10 +53,6 @@ automation engine.
   <img src="docs/screenshots/edit.png" alt="Bulk-editing color temperature with native-range hints" width="820">
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Zigbee Tunes — Dashboard: connection status, recent activity, fleet breakdown" width="820">
-</p>
-
 ## Install
 
 ### As a Home Assistant add-on (recommended)
@@ -121,6 +117,10 @@ Zigbee2MQTT ──publish──►  MQTT broker  (z2m_discovery/*)
 Device **state and commands are untouched** — they flow Z2M ↔ HA directly.
 Only the retained MQTT Discovery (config) payloads pass through Zigbee
 Tunes.
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Zigbee Tunes — Dashboard: connection status, recent activity, fleet breakdown" width="820">
+</p>
 
 ## Documentation
 
