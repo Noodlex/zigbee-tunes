@@ -23,6 +23,10 @@ parc multi-marques, sans jamais modifier tes appareils Zigbee physiques.
 
 ## Pourquoi
 
+Zigbee Tunes est né d'un besoin perso : je ne trouvais pas d'alternative
+pour faire ça, alors je l'ai créé pour combler ce manque dans l'écosystème
+Home Assistant.
+
 Z2M annonce chaque appareil avec ses capacités natives. Quand le parc
 mélange des marques aux plages différentes (Innr 2200–5000K, IKEA
 2200–4000K, contrôleurs WW/CW génériques 2000–6500K…), Home Assistant

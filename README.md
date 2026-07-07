@@ -23,6 +23,10 @@ physical Zigbee devices are never modified.
 
 ## Why
 
+Zigbee Tunes started as a personal project: I couldn't find an existing
+way to normalize what Home Assistant sees from Z2M, so I built one to fill
+that gap in the Home Assistant ecosystem.
+
 Z2M advertises each device with its native capabilities. When your fleet
 mixes brands with different ranges (Innr 2200–5000K, IKEA 2200–4000K,
 generic WW/CW controllers 2000–6500K…), Home Assistant shows inconsistent
