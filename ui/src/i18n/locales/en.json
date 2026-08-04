@@ -12,6 +12,8 @@
     "group_badge_title": "Zigbee2MQTT group — virtual entity that pilots several real bulbs",
     "refresh": "Refresh",
     "cancel": "Cancel",
+    "edit": "Edit",
+    "save": "Save",
     "remove": "Remove",
     "error_prefix": "Error: {message}",
     "failure_prefix": "Failed: {message}",
@@ -81,7 +83,10 @@
     "search_placeholder": "Search name, IEEE, vendor, model, type, configuration...",
     "empty": "No device with a custom configuration",
     "remove_button": "✕ Remove",
-    "remove_title": "Remove {type} for {device}"
+    "remove_title": "Remove {type} for {device}",
+    "legend_title": "Configurations in use:",
+    "edit_title": "Edit {type} for {device}",
+    "edit_success": "Rule updated — {republished} payload(s) republished"
   },
   "dashboard": {
     "title": "Dashboard",

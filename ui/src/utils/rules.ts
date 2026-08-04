@@ -17,6 +17,64 @@ export function brightnessPercent(scale: number): number {
 }
 
 /**
+ * Identity of a rule as the user perceives it: its type AND its values.
+ * Two rules with the same signature normalize their devices the exact same
+ * way, so the UI paints them with the same colour; changing one value
+ * produces a new signature — and a new colour — which is the point: the
+ * edited device visually leaves its group.
+ *
+ * Returns null for `entity-rename`: its value is unique per device by
+ * nature, so colouring it would yield one colour per row and group nothing.
+ */
+export function ruleSignature(rule: AppliedRule): string | null {
+  switch (rule.type) {
+    case 'color-temp-range':
+      return `color-temp-range|${rule.min_mireds ?? ''}|${rule.max_mireds ?? ''}`;
+    case 'brightness-range':
+      return `brightness-range|${rule.max_scale ?? ''}`;
+    case 'suggested-area':
+      return `suggested-area|${rule.area ?? ''}`;
+    default:
+      return null;
+  }
+}
+
+/** naive-ui NTag `color` prop shape. */
+export interface TagStyle {
+  color: string;
+  textColor: string;
+}
+
+/**
+ * Hues far enough apart to read as distinct at tag size. Signatures beyond
+ * this count wrap around and reuse a hue — the legend always spells out the
+ * values, so a reused colour stays disambiguable.
+ */
+const SIGNATURE_HUES = [172, 38, 265, 330, 205, 140, 12, 295];
+
+/**
+ * Colour for the Nth distinct rule signature.
+ *
+ * The hue is theme-independent (it encodes *which* configuration this is),
+ * while saturation/lightness come from CSS custom properties set by the
+ * .zt-dark / .zt-light classes. That way a theme switch is resolved by the
+ * cascade — no JS theme state to keep in sync, which would go stale in a
+ * component that isn't the one owning the theme preference.
+ */
+export function signatureStyle(index: number): TagStyle {
+  const hue = SIGNATURE_HUES[index % SIGNATURE_HUES.length]!;
+  return {
+    color: `hsl(${hue} var(--zt-sig-bg-s) var(--zt-sig-bg-l))`,
+    textColor: `hsl(${hue} var(--zt-sig-fg-s) var(--zt-sig-fg-l))`,
+  };
+}
+
+/** Colour for rules that carry no groupable value (entity-rename). */
+export function neutralTagStyle(): TagStyle {
+  return { color: 'var(--zt-sig-neutral-bg)', textColor: 'var(--zt-sig-neutral-fg)' };
+}
+
+/**
  * Render a rule's type-specific config as a human-readable string.
  * Labels are localized via the passed-in `t` function (callers typically
  * pass `t` from `useI18n()`).
