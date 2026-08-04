@@ -29,6 +29,10 @@ const { t } = useI18n();
 const FALLBACK_MIN = 100;
 const FALLBACK_MAX = 700;
 
+/** Zigbee brightness scale. 254 is the native maximum, i.e. "no limit". */
+const BRIGHTNESS_MIN = 1;
+const BRIGHTNESS_MAX = 254;
+
 const cct = computed(() => cctRangeStats(props.devices));
 
 // Values the editor opened with. The dialog unmounts its body when it closes
@@ -129,41 +133,82 @@ const maxPercent = computed<number | null>({
 });
 
 /**
- * Which unit the two fields accept. One field per bound instead of one per
- * unit: with both on screen it was never obvious which one to fill in.
+ * Which unit the fields accept. One field per bound instead of one per unit:
+ * with both on screen it was never obvious which one to fill in. Applies to
+ * every range type — a brightness cap is just as naturally expressed as
+ * "80%" as it is as "203".
  */
-type Unit = 'mireds' | 'percent';
-const unit = ref<Unit>('mireds');
+type Unit = 'absolute' | 'percent';
+const unit = ref<Unit>('absolute');
+const isPercent = computed(() => unit.value === 'percent');
+
+/** Label of the raw unit, which differs per transformer. */
+const absoluteUnitLabel = computed(() =>
+  props.type === 'brightness-range'
+    ? `${BRIGHTNESS_MIN}–${BRIGHTNESS_MAX}`
+    : t('panel.unit_mireds'),
+);
 
 const minField = computed<number | null>({
-  get: () => (unit.value === 'mireds' ? min.value : minPercent.value),
+  get: () => (isPercent.value ? minPercent.value : min.value),
   set: (v) => {
-    if (unit.value === 'mireds') min.value = v;
-    else minPercent.value = v;
+    if (isPercent.value) minPercent.value = v;
+    else min.value = v;
   },
 });
 
 const maxField = computed<number | null>({
-  get: () => (unit.value === 'mireds' ? max.value : maxPercent.value),
+  get: () => (isPercent.value ? maxPercent.value : max.value),
   set: (v) => {
-    if (unit.value === 'mireds') max.value = v;
-    else maxPercent.value = v;
+    if (isPercent.value) maxPercent.value = v;
+    else max.value = v;
   },
 });
 
-// In mireds the field accepts exactly what the axis shows, so typing can't
-// produce a value the slider is unable to represent.
-const fieldMin = computed(() => (unit.value === 'mireds' ? bounds.value[0] : 0));
-const fieldMax = computed(() => (unit.value === 'mireds' ? bounds.value[1] : 100));
+/**
+ * Brightness percentages are relative to the native maximum, matching what
+ * the scale means: 254 is "no limit", so 254 is 100%.
+ */
+const scalePercent = computed<number | null>({
+  get: () => (scale.value === null ? null : brightnessPercent(scale.value)),
+  set: (percent) => {
+    if (percent === null) {
+      scale.value = null;
+      return;
+    }
+    const raw = Math.round((Math.min(100, Math.max(0, percent)) / 100) * BRIGHTNESS_MAX);
+    scale.value = Math.min(BRIGHTNESS_MAX, Math.max(BRIGHTNESS_MIN, raw));
+  },
+});
+
+const scaleField = computed<number | null>({
+  get: () => (isPercent.value ? scalePercent.value : scale.value),
+  set: (v) => {
+    if (isPercent.value) scalePercent.value = v;
+    else scale.value = v;
+  },
+});
+
+// In its raw unit the field accepts exactly what the slider shows, so typing
+// can't produce a value the slider is unable to represent.
+const fieldMin = computed(() => {
+  if (isPercent.value) return 0;
+  return props.type === 'brightness-range' ? BRIGHTNESS_MIN : bounds.value[0];
+});
+const fieldMax = computed(() => {
+  if (isPercent.value) return 100;
+  return props.type === 'brightness-range' ? BRIGHTNESS_MAX : bounds.value[1];
+});
 
 function kelvinLabel(mireds: number | null): string {
   if (mireds === null || mireds === 0) return '';
   return `${miredsToKelvin(mireds)}K`;
 }
 
+/** Shows the unit the field is NOT currently using, so both stay in view. */
 function scaleLabel(value: number | null): string {
   if (value === null || value === 0) return '';
-  return `${brightnessPercent(value)}%`;
+  return isPercent.value ? String(value) : `${brightnessPercent(value)}%`;
 }
 
 /** Mireds are the inverse of kelvin, so the tooltip shows both, plus the
@@ -225,7 +270,7 @@ function formatScale(value: number): string {
           v-model:value="minField"
           :min="fieldMin"
           :max="fieldMax"
-          :placeholder="unit === 'mireds' ? t('panel.mireds_placeholder') : '%'"
+          :placeholder="isPercent ? '%' : t('panel.mireds_placeholder')"
           size="small"
           clearable
           :show-button="false"
@@ -237,7 +282,7 @@ function formatScale(value: number): string {
           v-model:value="maxField"
           :min="fieldMin"
           :max="fieldMax"
-          :placeholder="unit === 'mireds' ? t('panel.mireds_placeholder') : '%'"
+          :placeholder="isPercent ? '%' : t('panel.mireds_placeholder')"
           size="small"
           clearable
           :show-button="false"
@@ -246,7 +291,7 @@ function formatScale(value: number): string {
 
         <span />
         <NRadioGroup v-model:value="unit" size="small">
-          <NRadioButton value="mireds">{{ t('panel.unit_mireds') }}</NRadioButton>
+          <NRadioButton value="absolute">{{ absoluteUnitLabel }}</NRadioButton>
           <NRadioButton value="percent">%</NRadioButton>
         </NRadioGroup>
         <span />
@@ -256,29 +301,37 @@ function formatScale(value: number): string {
     <template v-else-if="type === 'brightness-range'">
       <div class="slider-block">
         <NSlider
-          :value="scale ?? 254"
-          :min="1"
-          :max="254"
+          :value="scale ?? BRIGHTNESS_MAX"
+          :min="BRIGHTNESS_MIN"
+          :max="BRIGHTNESS_MAX"
           :format-tooltip="formatScale"
           :step="1"
           @update:value="(v: number) => (scale = v)"
         />
       </div>
 
-      <div class="numeric-row">
+      <div class="numeric-grid">
         <span class="field-label">{{ t('panel.field_max_scale') }}</span>
         <NInputNumber
-          v-model:value="scale"
-          :min="1"
-          :max="254"
-          :placeholder="t('panel.scale_placeholder')"
+          v-model:value="scaleField"
+          :min="fieldMin"
+          :max="fieldMax"
+          :placeholder="isPercent ? '%' : t('panel.scale_placeholder')"
           size="small"
           clearable
           :show-button="false"
-          style="width: 88px"
         />
-        <span class="field-hint">{{ scaleLabel(scale) }}</span>
-        <span class="field-native">{{ t('panel.field_brightness_hint') }}</span>
+        <span class="field-hint">
+          {{ scaleLabel(scale) }}
+          <span class="field-native">{{ t('panel.field_brightness_hint') }}</span>
+        </span>
+
+        <span />
+        <NRadioGroup v-model:value="unit" size="small">
+          <NRadioButton value="absolute">{{ absoluteUnitLabel }}</NRadioButton>
+          <NRadioButton value="percent">%</NRadioButton>
+        </NRadioGroup>
+        <span />
       </div>
     </template>
 
