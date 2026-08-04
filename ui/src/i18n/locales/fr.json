@@ -64,7 +64,6 @@
     "field_min": "min",
     "field_max": "max",
     "field_max_scale": "max_scale",
-    "field_brightness_max": "{value} max",
     "field_brightness_hint": "(254 = pas de limite)",
     "area_placeholder": "ex : Salon",
     "device_name_placeholder": "Nom affiché HA",
@@ -72,8 +71,9 @@
     "scale_placeholder": "1-254",
     "conflicts_header": "{count} règle(s) existante(s) à écraser",
     "apply_button": "Appliquer à {count} appareil(s)",
-    "cct_native_range": "natif des appareils : {low} → {high}",
     "cct_safe_intersection": "intersection sûre : {min} → {max}",
+    "device_capability": "capacité de l'appareil · {min}–{max}",
+    "unit_mireds": "mireds",
     "cct_missing_data": "{count} appareil(s) sans donnée native (Z2M doit publier sur z2m_discovery)"
   },
   "customizations": {
@@ -90,7 +90,6 @@
     "modal_targets_one": "Seul {device} sera modifié",
     "modal_targets_many": "{count} appareils seront modifiés",
     "shared_badge_title": "Configuration partagée — {count} appareils l'utilisent : {devices}",
-    "scope_device_named": "{device} seulement",
     "legend_edit_title": "Modifier cette configuration sur ses {count} appareil(s)",
     "legend_delete_title": "Retirer cette configuration de ses {count} appareil(s)",
     "legend_delete_confirm": "Retirer cette configuration de {count} appareil(s) ?",

@@ -1,7 +1,7 @@
 // Shared formatting helpers for transformer rules.
 // Avoids duplicating describeRule / kelvin conversion across views.
 
-import type { AppliedRule } from '../api/types';
+import type { AppliedRule, Device } from '../api/types';
 
 /** Minimal `t` shape required by describeRule, so we don't need to import vue-i18n here. */
 export type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
@@ -14,6 +14,64 @@ export function miredsToKelvin(mireds: number): number {
 /** Convert a brightness scale (1..254) to a 0..100 percentage. */
 export function brightnessPercent(scale: number): number {
   return Math.round((scale / 254) * 100);
+}
+
+export interface CctRangeStats {
+  /** False when no selected device advertises a native CCT range. */
+  hasData: boolean;
+  /** Devices with color_temp that haven't published their range yet. */
+  missing: number;
+  /** Widest span any device can reach: [min of mins, max of maxs]. */
+  unionLow: number | null;
+  unionHigh: number | null;
+  /** Lowest min EVERY device can honour (the strictest of all mins). */
+  safeMin: number | null;
+  /** Highest max EVERY device can honour (the strictest of all maxs). */
+  safeMax: number | null;
+}
+
+/**
+ * Native colour-temperature range statistics across a set of devices.
+ *
+ * [safeMin, safeMax] is the intersection: pick anything inside and no device
+ * is asked for more than it physically supports. [unionLow, unionHigh] is the
+ * envelope, useful to bound a slider without clipping a value that is already
+ * outside the intersection.
+ *
+ * Shared by the bulk-edit panel and the rule editor so both describe a
+ * selection the same way.
+ */
+export function cctRangeStats(devices: Device[]): CctRangeStats {
+  const mins: number[] = [];
+  const maxs: number[] = [];
+  let missing = 0;
+  for (const d of devices) {
+    if (!d.capabilities.includes('color_temp')) continue;
+    if (d.native_min_mireds === null || d.native_max_mireds === null) {
+      missing += 1;
+      continue;
+    }
+    mins.push(d.native_min_mireds);
+    maxs.push(d.native_max_mireds);
+  }
+  if (mins.length === 0) {
+    return {
+      hasData: false,
+      missing,
+      unionLow: null,
+      unionHigh: null,
+      safeMin: null,
+      safeMax: null,
+    };
+  }
+  return {
+    hasData: true,
+    missing,
+    unionLow: Math.min(...mins),
+    unionHigh: Math.max(...maxs),
+    safeMin: Math.max(...mins),
+    safeMax: Math.min(...maxs),
+  };
 }
 
 /**

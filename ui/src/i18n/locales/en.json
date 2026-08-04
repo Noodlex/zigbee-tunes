@@ -64,7 +64,6 @@
     "field_min": "min",
     "field_max": "max",
     "field_max_scale": "max_scale",
-    "field_brightness_max": "{value} max",
     "field_brightness_hint": "(254 = no limit)",
     "area_placeholder": "e.g. Living room",
     "device_name_placeholder": "HA display name",
@@ -72,8 +71,9 @@
     "scale_placeholder": "1-254",
     "conflicts_header": "{count} existing rule(s) will be overwritten",
     "apply_button": "Apply to {count} device(s)",
-    "cct_native_range": "device native: {low} → {high}",
     "cct_safe_intersection": "safe intersection: {min} → {max}",
+    "device_capability": "what this device supports · {min}–{max}",
+    "unit_mireds": "mireds",
     "cct_missing_data": "{count} device(s) without native data (Z2M must publish on z2m_discovery)"
   },
   "customizations": {
@@ -90,7 +90,6 @@
     "modal_targets_one": "Only {device} will change",
     "modal_targets_many": "{count} devices will change",
     "shared_badge_title": "Shared configuration — {count} devices use it: {devices}",
-    "scope_device_named": "{device} only",
     "legend_edit_title": "Edit this configuration on its {count} device(s)",
     "legend_delete_title": "Remove this configuration from its {count} device(s)",
     "legend_delete_confirm": "Remove this configuration from {count} device(s)?",

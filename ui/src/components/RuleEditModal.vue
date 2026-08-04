@@ -5,7 +5,7 @@
 // what you are about to type, so it shouldn't be an afterthought at save time.
 
 import { computed, ref, watch } from 'vue';
-import { NModal, NRadio, NRadioGroup, NButton, NSpace } from 'naive-ui';
+import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
 import type { AppliedRule, Device } from '../api/types';
@@ -83,10 +83,17 @@ const valid = computed(() => {
   }
 });
 
-const targets = computed<string[]>(() => {
-  if (scope.value === 'all') return props.sharedDevices.map((d) => d.ieee);
-  return props.device ? [props.device.ieee] : [];
+/**
+ * Devices the save will hit. Also feeds the editor, so the slider bounds and
+ * the native-range hints follow the chosen scope: one device shows its own
+ * range, the whole group shows the envelope and the safe intersection.
+ */
+const targetDevices = computed<Device[]>(() => {
+  if (scope.value === 'all') return props.sharedDevices;
+  return props.device ? [props.device] : [];
 });
+
+const targets = computed<string[]>(() => targetDevices.value.map((d) => d.ieee));
 
 function buildValues(): Record<string, unknown> {
   const rule = props.rule!;
@@ -137,24 +144,21 @@ function onSave() {
       <div v-if="scopeChoosable" class="scope-block">
         <span class="scope-label">{{ t('customizations.scope_label') }}</span>
         <NRadioGroup v-model:value="scope" size="small">
-          <NSpace vertical :size="4">
-            <NRadio value="device">
-              {{ t('customizations.scope_device_named', { device: device?.friendly_name ?? '' }) }}
-              <span class="scope-hint">— {{ t('customizations.scope_device_hint') }}</span>
-            </NRadio>
-            <NRadio value="all">
-              {{ t('customizations.scope_all', { count: sharedDevices.length }) }}
-              <span class="scope-hint" :title="sharedNames">— {{ sharedNames }}</span>
-            </NRadio>
-          </NSpace>
+          <NRadioButton value="device">{{ device?.friendly_name }}</NRadioButton>
+          <NRadioButton value="all">
+            {{ t('customizations.scope_all', { count: sharedDevices.length }) }}
+          </NRadioButton>
         </NRadioGroup>
+        <!-- One line, about the choice actually made. -->
+        <span class="scope-hint" :title="scope === 'all' ? sharedNames : ''">
+          {{ scope === 'device' ? t('customizations.scope_device_hint') : sharedNames }}
+        </span>
       </div>
 
       <div class="fields-block">
         <RuleEditFields
           :type="rule.type"
-          :native-min-mireds="device?.native_min_mireds"
-          :native-max-mireds="device?.native_max_mireds"
+          :devices="targetDevices"
           v-model:min="min"
           v-model:max="max"
           v-model:scale="scale"

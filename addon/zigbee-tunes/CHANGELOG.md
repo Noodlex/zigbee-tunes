@@ -24,6 +24,18 @@ follows [Semantic Versioning](https://semver.org/).
   configuration — or every device using it. The question only appears when
   the configuration is actually shared, and the default never touches other
   devices.
+- Ranges are set with a **slider** bounded by what the targeted devices can
+  actually do: dragging shows how much of their capability is being cut
+  instead of typing mireds blind. The bounds follow the chosen scope — one
+  device shows its own range, a whole group shows the envelope with the safe
+  intersection marked.
+- Each bound can be entered **in mireds or as a percentage** of that range
+  (0% = the low end of the axis, 100% = the high end), whichever is easier to
+  reason about. Percentages resolve to mireds immediately, so rules keep
+  storing absolute values and a configuration is still shared by the devices
+  that use it.
+- **Creating** a rule from the Devices page uses the same editor as changing
+  one afterwards, so both look and behave alike.
 
 Saving an edit reuses the existing smart-apply path: one atomic refresh.
 
