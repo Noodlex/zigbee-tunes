@@ -12,6 +12,8 @@
     "group_badge_title": "Groupe Zigbee2MQTT — entité virtuelle qui pilote plusieurs ampoules réelles",
     "refresh": "Rafraîchir",
     "cancel": "Annuler",
+    "edit": "Modifier",
+    "save": "Enregistrer",
     "remove": "Retirer",
     "error_prefix": "Erreur : {message}",
     "failure_prefix": "Échec : {message}",
@@ -81,7 +83,10 @@
     "search_placeholder": "Rechercher nom, IEEE, fabricant, modèle, type, configuration...",
     "empty": "Aucun appareil avec configuration personnalisée",
     "remove_button": "✕ Retirer",
-    "remove_title": "Retirer {type} pour {device}"
+    "remove_title": "Retirer {type} pour {device}",
+    "legend_title": "Configurations utilisées :",
+    "edit_title": "Modifier {type} pour {device}",
+    "edit_success": "Règle mise à jour — {republished} payload(s) republié(s)"
   },
   "dashboard": {
     "title": "Tableau de bord",

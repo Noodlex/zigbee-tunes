@@ -4,6 +4,23 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.1.0 — Edit rules without leaving Customizations
+
+### Added
+- Edit a rule in place from the **Customizations** page: the values are
+  prefilled and, for `color-temp-range`, the device's native mireds range is
+  shown while editing. Previously a change meant going back to Devices,
+  re-selecting the device and re-applying.
+- Rule tags are coloured by **configuration** (type + values) instead of type,
+  so devices normalized identically share a colour and an edited device
+  visually leaves its group. `entity-rename` stays neutral — its value is
+  unique per device.
+- A legend above the list recaps every configuration in use with its colour
+  and how many devices share it.
+
+Saving an edit reuses the existing smart-apply path: one atomic refresh, and
+devices that shared the original rule are left untouched.
+
 ## 1.0.0 — First public release
 
 Zigbee Tunes normalizes the MQTT Discovery payloads Zigbee2MQTT publishes

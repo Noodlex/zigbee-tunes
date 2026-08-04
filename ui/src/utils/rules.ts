@@ -17,6 +17,63 @@ export function brightnessPercent(scale: number): number {
 }
 
 /**
+ * Identity of a rule as the user perceives it: its type AND its values.
+ * Two rules with the same signature normalize their devices the exact same
+ * way, so the UI paints them with the same colour; changing one value
+ * produces a new signature — and a new colour — which is the point: the
+ * edited device visually leaves its group.
+ *
+ * Returns null for `entity-rename`: its value is unique per device by
+ * nature, so colouring it would yield one colour per row and group nothing.
+ */
+export function ruleSignature(rule: AppliedRule): string | null {
+  switch (rule.type) {
+    case 'color-temp-range':
+      return `color-temp-range|${rule.min_mireds ?? ''}|${rule.max_mireds ?? ''}`;
+    case 'brightness-range':
+      return `brightness-range|${rule.max_scale ?? ''}`;
+    case 'suggested-area':
+      return `suggested-area|${rule.area ?? ''}`;
+    default:
+      return null;
+  }
+}
+
+/** naive-ui NTag `color` prop shape. */
+export interface TagStyle {
+  color: string;
+  textColor: string;
+}
+
+/**
+ * Hues far enough apart to read as distinct at tag size. Signatures beyond
+ * this count wrap around and reuse a hue — the legend always spells out the
+ * values, so a reused colour stays disambiguable.
+ */
+const SIGNATURE_HUES = [172, 38, 265, 330, 205, 140, 12, 295];
+
+/**
+ * Colour for the Nth distinct rule signature, tuned per theme for contrast.
+ *
+ * The values must be concrete colours: naive-ui forwards them into an inline
+ * custom property, and a `var()` pointing at a theme variable would be
+ * substituted once and never re-resolve when the theme class changes.
+ */
+export function signatureStyle(index: number, dark: boolean): TagStyle {
+  const hue = SIGNATURE_HUES[index % SIGNATURE_HUES.length]!;
+  return dark
+    ? { color: `hsl(${hue} 45% 22%)`, textColor: `hsl(${hue} 70% 78%)` }
+    : { color: `hsl(${hue} 65% 91%)`, textColor: `hsl(${hue} 75% 29%)` };
+}
+
+/** Colour for rules that carry no groupable value (entity-rename). */
+export function neutralTagStyle(dark: boolean): TagStyle {
+  return dark
+    ? { color: 'rgba(255, 255, 255, 0.10)', textColor: '#aaa' }
+    : { color: 'rgba(0, 0, 0, 0.06)', textColor: '#666' };
+}
+
+/**
  * Render a rule's type-specific config as a human-readable string.
  * Labels are localized via the passed-in `t` function (callers typically
  * pass `t` from `useI18n()`).

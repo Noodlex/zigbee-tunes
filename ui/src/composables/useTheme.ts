@@ -24,6 +24,21 @@ interface ThemeApi {
   setPref: (p: ThemePref) => void;
 }
 
+// Module-level, so every caller shares ONE source of truth. Building this
+// state inside the function would hand each extra consumer its own copy:
+// it would read the right value on mount and then never see the preference
+// change, so that component would keep rendering the previous theme.
+const pref = ref<ThemePref>(loadPref());
+const systemDark = ref(detectSystemDark());
+
+const isDark = computed(() => pref.value === 'dark' || (pref.value === 'auto' && systemDark.value));
+const theme = computed<GlobalTheme | null>(() => (isDark.value ? darkTheme : null));
+
+function setPref(p: ThemePref) {
+  pref.value = p;
+  if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, p);
+}
+
 /**
  * Theme state:
  *  - pref: user preference (dark | light | auto), persisted in
@@ -31,11 +46,11 @@ interface ThemeApi {
  *  - isDark: computed boolean combining pref + system media query.
  *  - theme: value to pass to <NConfigProvider :theme="...">. null = the
  *    default naive-ui light theme, darkTheme = dark theme.
+ *
+ * The state above is shared; each caller only registers its own listener on
+ * the system media query so 'auto' keeps tracking the OS setting.
  */
 export function useTheme(): ThemeApi {
-  const pref = ref<ThemePref>(loadPref());
-  const systemDark = ref(detectSystemDark());
-
   let mql: MediaQueryList | null = null;
   const onChange = (e: MediaQueryListEvent) => {
     systemDark.value = e.matches;
@@ -50,14 +65,6 @@ export function useTheme(): ThemeApi {
   onUnmounted(() => {
     if (mql) mql.removeEventListener('change', onChange);
   });
-
-  const isDark = computed(() => pref.value === 'dark' || (pref.value === 'auto' && systemDark.value));
-  const theme = computed<GlobalTheme | null>(() => (isDark.value ? darkTheme : null));
-
-  function setPref(p: ThemePref) {
-    pref.value = p;
-    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, p);
-  }
 
   return { pref, isDark, theme, setPref };
 }
