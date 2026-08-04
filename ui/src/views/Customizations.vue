@@ -8,22 +8,22 @@ import {
   NSpin,
   NTag,
   NInput,
-  NInputNumber,
   NEllipsis,
   NEmpty,
   NPopconfirm,
+  NIcon,
   useMessage,
 } from 'naive-ui';
+import { IconPencil, IconTrash } from '../components/icons';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
 import { useTheme } from '../composables/useTheme';
+import RuleEditModal from '../components/RuleEditModal.vue';
 import {
   describeRule,
   ruleSignature,
   signatureStyle,
   neutralTagStyle,
-  miredsToKelvin,
-  brightnessPercent,
   type TagStyle,
 } from '../utils/rules';
 import { isZ2mGroup } from '../utils/devices';
@@ -42,7 +42,7 @@ const error = ref<string | null>(null);
 const search = ref('');
 
 const message = useMessage();
-const { resetRuleForDevice } = useRuleActions();
+const { resetRuleForDevice, removeDevicesFromRule } = useRuleActions();
 const { isDark } = useTheme();
 
 async function refresh() {
@@ -82,11 +82,11 @@ const filtered = computed<DeviceGroup[]>(() => {
   return allGroups.value.filter((g) => g.searchHay.includes(q));
 });
 
-interface LegendEntry {
+interface ConfigEntry {
   sig: string;
   index: number;
-  rule: AppliedRule; // representative, for describeRule()
-  count: number; // how many devices share this exact configuration
+  rule: AppliedRule; // representative, for describeRule() and the type
+  devices: Device[]; // every device using this exact configuration
 }
 
 /**
@@ -96,24 +96,24 @@ interface LegendEntry {
  * instead of string-sorting; the index drives the colour assignment.
  */
 const signatures = computed(() => {
-  const seen = new Map<string, { rule: AppliedRule; count: number }>();
+  const seen = new Map<string, { rule: AppliedRule; devices: Device[] }>();
   for (const g of allGroups.value) {
     for (const r of g.rules) {
       const sig = ruleSignature(r);
       if (sig === null) continue;
       const entry = seen.get(sig);
-      if (entry) entry.count += 1;
-      else seen.set(sig, { rule: r, count: 1 });
+      if (entry) entry.devices.push(g.device);
+      else seen.set(sig, { rule: r, devices: [g.device] });
     }
   }
   const ordered = [...seen.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const index = new Map<string, number>();
-  const legend: LegendEntry[] = ordered.map((sig, i) => {
+  const list: ConfigEntry[] = ordered.map((sig, i) => {
     index.set(sig, i);
     const e = seen.get(sig)!;
-    return { sig, index: i, rule: e.rule, count: e.count };
+    return { sig, index: i, rule: e.rule, devices: e.devices };
   });
-  return { index, legend };
+  return { index, list };
 });
 
 /** Tag colour for a rule: same values -> same colour, different -> different. */
@@ -124,100 +124,112 @@ function tagStyle(rule: AppliedRule): TagStyle {
   return index === undefined ? neutralTagStyle(isDark.value) : signatureStyle(index, isDark.value);
 }
 
-// --- Inline edit -----------------------------------------------------------
-// The same rule id can appear under several devices (a rule targeting many
-// devices renders one row per device), so the edit key pairs both.
-const editingKey = ref<string | null>(null);
-const editingRule = ref<AppliedRule | null>(null);
-const editMin = ref<number | null>(null);
-const editMax = ref<number | null>(null);
-const editScale = ref<number | null>(null);
-const editText = ref('');
+// --- Edit dialog -----------------------------------------------------------
+// A configuration (a signature: type + values) can be shared by several
+// devices, so editing one from a device row is ambiguous: change it for that
+// device alone, or for everyone using it? The dialog asks before showing the
+// values — same idea as editing one occurrence of a recurring event versus
+// the whole series. Opening it from the Configurations list is always the
+// series, so no question is asked there.
+const editOpen = ref(false);
+const editRule = ref<AppliedRule | null>(null);
+const editDevice = ref<Device | null>(null);
+const editSharedDevices = ref<Device[]>([]);
 const saving = ref(false);
 
-function editKey(ieee: string, rule: AppliedRule): string {
-  return `${ieee}:${rule.id}`;
-}
-
-function isEditing(ieee: string, rule: AppliedRule): boolean {
-  return editingKey.value === editKey(ieee, rule);
-}
-
-function startEdit(ieee: string, rule: AppliedRule) {
-  editingKey.value = editKey(ieee, rule);
-  editingRule.value = rule;
-  editMin.value = rule.min_mireds ?? null;
-  editMax.value = rule.max_mireds ?? null;
-  editScale.value = rule.max_scale ?? null;
-  editText.value =
-    rule.type === 'suggested-area'
-      ? (rule.area ?? '')
-      : rule.type === 'entity-rename'
-        ? (rule.device_name ?? '')
-        : '';
-}
-
-function cancelEdit() {
-  editingKey.value = null;
-  editingRule.value = null;
-}
-
-const editValid = computed(() => {
-  const rule = editingRule.value;
-  if (!rule) return false;
-  switch (rule.type) {
-    case 'color-temp-range':
-      return editMin.value !== null || editMax.value !== null;
-    case 'brightness-range':
-      return editScale.value !== null;
-    default:
-      return editText.value.trim().length > 0;
-  }
-});
-
-function kelvinLabel(mireds: number | null): string {
-  if (mireds === null || mireds === 0) return '';
-  return `${miredsToKelvin(mireds)}K`;
-}
-
-function scaleLabel(scale: number | null): string {
-  if (scale === null || scale === 0) return '';
-  return `${brightnessPercent(scale)}%`;
+/** Devices whose rules include this exact configuration. */
+function devicesForSignature(sig: string): Device[] {
+  return signatures.value.list.find((e) => e.sig === sig)?.devices ?? [];
 }
 
 /**
- * Saves the edited values through the same smart-apply endpoint the Devices
- * view uses: the backend drops this device from the existing rule of that
- * type (deleting the rule if it targeted nobody else) and recreates it with
- * the new values, in a single atomic refresh. Other devices that shared the
- * original rule keep it untouched — same semantics as the ✕ button.
+ * How many devices share a rule's configuration. Surfaced on the row so the
+ * sharing is visible BEFORE opening the dialog — otherwise you can't tell
+ * whether editing here would affect other devices too.
  */
-async function saveEdit(ieee: string, rule: AppliedRule) {
-  if (!editValid.value || saving.value) return;
-  const payload: Record<string, unknown> = { type: rule.type };
-  switch (rule.type) {
-    case 'color-temp-range':
-      if (editMin.value !== null) payload.min_mireds = editMin.value;
-      if (editMax.value !== null) payload.max_mireds = editMax.value;
-      break;
-    case 'brightness-range':
-      payload.max_scale = editScale.value;
-      break;
-    case 'suggested-area':
-      payload.area = editText.value.trim();
-      break;
-    case 'entity-rename':
-      payload.device_name = editText.value.trim();
-      break;
-  }
+function sharedDevicesFor(rule: AppliedRule): Device[] {
+  const sig = ruleSignature(rule);
+  if (sig === null) return [];
+  return devicesForSignature(sig);
+}
+
+function openDeviceEdit(device: Device, rule: AppliedRule) {
+  const sig = ruleSignature(rule);
+  editRule.value = rule;
+  editDevice.value = device;
+  // entity-rename has no signature (its value is unique per device), so it
+  // is never shared and the dialog won't offer a scope.
+  editSharedDevices.value = sig === null ? [device] : devicesForSignature(sig);
+  editOpen.value = true;
+}
+
+function openConfigEdit(entry: ConfigEntry) {
+  editRule.value = entry.rule;
+  editDevice.value = null;
+  editSharedDevices.value = entry.devices;
+  editOpen.value = true;
+}
+
+/**
+ * Saves through the same smart-apply endpoint the Devices view uses: the
+ * backend drops the targeted devices from the existing rules of that type
+ * (deleting a rule left without targets) and recreates one rule with the new
+ * values, in a single atomic refresh. Targeting the single device makes it
+ * leave its group as a separate configuration; targeting them all moves the
+ * whole configuration and keeps it a single rule.
+ */
+async function onEditSave(payload: { targets: string[]; values: Record<string, unknown> }) {
+  if (saving.value) return;
   saving.value = true;
   try {
-    const res = await api.applyToDevices([ieee], [payload]);
-    message.success(t('customizations.edit_success', { republished: res.refresh.republished }));
-    cancelEdit();
+    const res = await api.applyToDevices(payload.targets, [payload.values]);
+    message.success(
+      t('customizations.edit_success', {
+        count: payload.targets.length,
+        republished: res.refresh.republished,
+      }),
+    );
+    editOpen.value = false;
     await refresh();
   } catch (e) {
     message.error(t('common.failure_prefix', { message: (e as Error).message }));
+  } finally {
+    saving.value = false;
+  }
+}
+
+/**
+ * Removes a whole configuration: every device using it loses the rule.
+ *
+ * Devices are grouped by rule id first, because one rule can cover several of
+ * them — removing them device by device would send target lists computed from
+ * the same stale rule and put back what the previous call removed.
+ */
+async function deleteConfiguration(entry: ConfigEntry) {
+  if (saving.value) return;
+  const byRule = new Map<number, { rule: AppliedRule; ieees: string[] }>();
+  for (const g of allGroups.value) {
+    for (const r of g.rules) {
+      if (ruleSignature(r) !== entry.sig) continue;
+      const found = byRule.get(r.id);
+      if (found) found.ieees.push(g.device.ieee);
+      else byRule.set(r.id, { rule: r, ieees: [g.device.ieee] });
+    }
+  }
+  saving.value = true;
+  let republished = 0;
+  try {
+    for (const { rule, ieees } of byRule.values()) {
+      const res = await removeDevicesFromRule(ieees, rule);
+      republished += res.refresh.republished;
+    }
+    message.success(
+      t('customizations.delete_config_success', { count: entry.devices.length, republished }),
+    );
+    await refresh();
+  } catch (e) {
+    message.error(t('common.failure_prefix', { message: (e as Error).message }));
+    await refresh();
   } finally {
     saving.value = false;
   }
@@ -272,18 +284,59 @@ onMounted(refresh);
       v-html="t('customizations.description', { targetsAll: '<code>targets: [&quot;*&quot;]</code>' })"
     />
 
-    <!-- Colour legend: one entry per distinct rule configuration in use.
-         Devices sharing an entry are normalized identically; editing one
-         device's values moves it to a new entry (and a new colour). -->
-    <div v-if="signatures.legend.length > 0" class="legend">
-      <span class="legend-title">{{ t('customizations.legend_title') }}</span>
-      <span v-for="e in signatures.legend" :key="e.sig" class="legend-item">
-        <NTag size="small" :bordered="false" :color="signatureStyle(e.index, isDark)">
-          {{ e.rule.type }}
-        </NTag>
-        <span class="legend-config">{{ describeRule(e.rule, t) }}</span>
-        <span class="legend-count">×{{ e.count }}</span>
-      </span>
+    <!-- Configurations: one line per distinct configuration in use. Devices
+         on the same line are normalized identically; editing one device's
+         values moves it to its own line (and its own colour). -->
+    <div v-if="signatures.list.length > 0" class="configs">
+      <div class="configs-title">
+        {{ t('customizations.configs_title', { count: signatures.list.length }) }}
+      </div>
+      <div class="configs-list">
+        <div v-for="e in signatures.list" :key="e.sig" class="config-row">
+          <div class="config-type">
+            <NTag size="small" :bordered="false" :color="signatureStyle(e.index, isDark)">
+              {{ e.rule.type }}
+            </NTag>
+          </div>
+          <div class="config-values">{{ describeRule(e.rule, t) }}</div>
+          <div class="config-devices" :title="e.devices.map((d) => d.friendly_name).join(', ')">
+            {{ t('customizations.configs_devices', { count: e.devices.length }) }}
+          </div>
+          <div class="row-actions">
+            <NButton
+              size="small"
+              quaternary
+              circle
+              :disabled="saving"
+              :aria-label="t('customizations.legend_edit_title', { count: e.devices.length })"
+              :title="t('customizations.legend_edit_title', { count: e.devices.length })"
+              @click="openConfigEdit(e)"
+            >
+              <template #icon><NIcon><component :is="IconPencil" /></NIcon></template>
+            </NButton>
+            <NPopconfirm
+              :on-positive-click="() => deleteConfiguration(e)"
+              :positive-text="t('common.remove')"
+              :negative-text="t('common.cancel')"
+            >
+              <template #trigger>
+                <NButton
+                  size="small"
+                  quaternary
+                  circle
+                  type="error"
+                  :disabled="saving"
+                  :aria-label="t('customizations.legend_delete_title', { count: e.devices.length })"
+                  :title="t('customizations.legend_delete_title', { count: e.devices.length })"
+                >
+                  <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                </NButton>
+              </template>
+              {{ t('customizations.legend_delete_confirm', { count: e.devices.length }) }}
+            </NPopconfirm>
+          </div>
+        </div>
+      </div>
     </div>
 
     <NInput
@@ -339,8 +392,16 @@ onMounted(refresh);
                 :negative-text="t('common.cancel')"
               >
                 <template #trigger>
-                  <NButton size="small" quaternary type="error">
-                    ✕ {{ group.rules.length }}
+                  <NButton
+                    size="small"
+                    quaternary
+                    type="error"
+                    :disabled="saving"
+                    :aria-label="t('customizations.remove_all_title', { count: group.rules.length, device: group.device.friendly_name })"
+                    :title="t('customizations.remove_all_title', { count: group.rules.length, device: group.device.friendly_name })"
+                  >
+                    <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                    {{ group.rules.length }}
                   </NButton>
                 </template>
                 {{ t('customizations.remove_title', { type: '*', device: group.device.friendly_name }) }}
@@ -353,120 +414,71 @@ onMounted(refresh);
             <div v-for="r in group.rules" :key="r.id" class="rule-row">
               <div class="rule-type">
                 <NTag size="small" :bordered="false" :color="tagStyle(r)">{{ r.type }}</NTag>
+                <!-- Shared configuration: say so here, so you know before
+                     clicking Edit that other devices are on the same one. -->
+                <span
+                  v-if="sharedDevicesFor(r).length > 1"
+                  class="shared-badge"
+                  :title="t('customizations.shared_badge_title', {
+                    count: sharedDevicesFor(r).length,
+                    devices: sharedDevicesFor(r).map((d) => d.friendly_name).join(', '),
+                  })"
+                >
+                  ×{{ sharedDevicesFor(r).length }}
+                </span>
               </div>
 
               <div class="rule-config">
-                <span v-if="!isEditing(group.device.ieee, r)" class="rule-config-text">
-                  {{ describeRule(r, t) }}
-                </span>
-
-                <div v-else class="edit-fields">
-                  <template v-if="r.type === 'color-temp-range'">
-                    <span class="field-label">{{ t('panel.field_min') }}</span>
-                    <NInputNumber
-                      v-model:value="editMin"
-                      :min="100"
-                      :max="700"
-                      :placeholder="t('panel.mireds_placeholder')"
-                      size="small"
-                      clearable
-                      :show-button="false"
-                      style="width: 88px"
-                    />
-                    <span class="field-hint">{{ kelvinLabel(editMin) }}</span>
-                    <span class="field-sep">·</span>
-                    <span class="field-label">{{ t('panel.field_max') }}</span>
-                    <NInputNumber
-                      v-model:value="editMax"
-                      :min="100"
-                      :max="700"
-                      :placeholder="t('panel.mireds_placeholder')"
-                      size="small"
-                      clearable
-                      :show-button="false"
-                      style="width: 88px"
-                    />
-                    <span class="field-hint">{{ kelvinLabel(editMax) }}</span>
-                    <span
-                      v-if="group.device.native_min_mireds !== null && group.device.native_max_mireds !== null"
-                      class="field-native"
-                    >
-                      {{ t('panel.cct_native_range', {
-                        low: group.device.native_min_mireds,
-                        high: group.device.native_max_mireds,
-                      }) }}
-                    </span>
-                  </template>
-
-                  <template v-else-if="r.type === 'brightness-range'">
-                    <span class="field-label">{{ t('panel.field_max_scale') }}</span>
-                    <NInputNumber
-                      v-model:value="editScale"
-                      :min="1"
-                      :max="254"
-                      :placeholder="t('panel.scale_placeholder')"
-                      size="small"
-                      clearable
-                      :show-button="false"
-                      style="width: 88px"
-                    />
-                    <span class="field-hint">{{ scaleLabel(editScale) }}</span>
-                    <span class="field-native">{{ t('panel.field_brightness_hint') }}</span>
-                  </template>
-
-                  <NInput
-                    v-else
-                    v-model:value="editText"
-                    :placeholder="r.type === 'suggested-area'
-                      ? t('panel.area_placeholder')
-                      : t('panel.device_name_placeholder')"
-                    size="small"
-                    clearable
-                    style="max-width: 280px"
-                  />
-                </div>
+                <span class="rule-config-text">{{ describeRule(r, t) }}</span>
               </div>
 
-              <div class="rule-action">
-                <template v-if="!isEditing(group.device.ieee, r)">
-                  <NButton
-                    size="small"
-                    quaternary
-                    :title="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
-                    @click="startEdit(group.device.ieee, r)"
-                  >
-                    {{ t('common.edit') }}
-                  </NButton>
-                  <NButton
-                    size="small"
-                    type="error"
-                    ghost
-                    :title="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
-                    @click="onResetRule(group.device.ieee, r)"
-                  >
-                    {{ t('customizations.remove_button') }}
-                  </NButton>
-                </template>
-                <template v-else>
-                  <NButton
-                    size="small"
-                    type="primary"
-                    :disabled="!editValid"
-                    :loading="saving"
-                    @click="saveEdit(group.device.ieee, r)"
-                  >
-                    {{ t('common.save') }}
-                  </NButton>
-                  <NButton size="small" quaternary :disabled="saving" @click="cancelEdit">
-                    {{ t('common.cancel') }}
-                  </NButton>
-                </template>
+              <div class="row-actions">
+                <NButton
+                  size="small"
+                  quaternary
+                  circle
+                  :disabled="saving"
+                  :aria-label="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
+                  :title="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
+                  @click="openDeviceEdit(group.device, r)"
+                >
+                  <template #icon><NIcon><component :is="IconPencil" /></NIcon></template>
+                </NButton>
+                <NPopconfirm
+                  :on-positive-click="() => onResetRule(group.device.ieee, r)"
+                  :positive-text="t('common.remove')"
+                  :negative-text="t('common.cancel')"
+                >
+                  <template #trigger>
+                    <NButton
+                      size="small"
+                      quaternary
+                      circle
+                      type="error"
+                      :disabled="saving"
+                      :aria-label="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
+                      :title="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
+                    >
+                      <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                    </NButton>
+                  </template>
+                  {{ t('customizations.remove_title', { type: r.type, device: group.device.friendly_name }) }}
+                </NPopconfirm>
               </div>
             </div>
           </div>
         </div>
       </div>
     </NSpin>
+
+    <RuleEditModal
+      v-model:show="editOpen"
+      :rule="editRule"
+      :device="editDevice"
+      :shared-devices="editSharedDevices"
+      :saving="saving"
+      @save="onEditSave"
+    />
   </NSpace>
 </template>
 
@@ -570,6 +582,23 @@ onMounted(refresh);
   border-bottom: none;
 }
 
+.rule-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* "×3" on a rule row: this configuration is shared, editing it will ask. */
+.shared-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--zt-image-bg, rgba(127, 127, 127, 0.10));
+  color: var(--zt-text-secondary, #555);
+  cursor: default;
+}
+
 /* Monospace lives on the read-only text only — the edit fields keep the
    regular UI font for their labels. */
 .rule-config-text {
@@ -578,69 +607,70 @@ onMounted(refresh);
   color: var(--zt-text-secondary, #555);
 }
 
-.rule-action {
+
+/* Configurations: one line per distinct configuration, so a fleet with a
+   dozen of them stays scannable and the colours map to actual values.
+   Same column rhythm as .rule-row below. */
+.configs {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 6px;
 }
 
-/* Colour legend: recaps every distinct rule configuration in use, so a tag
-   colour can be traced back to actual values. */
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 16px;
-}
-
-.legend-title {
+.configs-title {
   font-size: 12px;
   color: var(--zt-text-hint, #888);
 }
 
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.configs-list {
+  border: 1px solid var(--zt-divider, rgba(127, 127, 127, 0.15));
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--zt-card-bg, transparent);
 }
 
-.legend-config {
+.config-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 110px auto;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--zt-divider-subtle, rgba(127, 127, 127, 0.05));
+}
+
+.config-row:last-child {
+  border-bottom: none;
+}
+
+.config-values {
   font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--zt-text-secondary, #555);
 }
 
-.legend-count {
+.config-devices {
   font-size: 11px;
   color: var(--zt-text-hint, #888);
+  cursor: default;
 }
 
-.edit-fields {
+/* Same action pair everywhere: pencil to edit, bin to remove, identical
+   size and variant in the configuration list and on the device rows. */
+.row-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
-.field-label {
-  font-size: 11px;
-  color: var(--zt-text-hint, #888);
-}
-
-.field-hint {
-  font-size: 11px;
-  color: var(--zt-text-hint, #888);
-  min-width: 44px;
-}
-
-.field-sep {
-  color: var(--zt-text-info, #666);
-}
-
-.field-native {
-  font-size: 10px;
-  font-style: italic;
-  color: var(--zt-text-hint, #888);
+@media (max-width: 720px) {
+  .config-row {
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+  }
+  .config-values {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 
 /* Stack the 5-column header and the rule rows on small screens instead of

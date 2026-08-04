@@ -7,20 +7,26 @@ import type { AppliedRule, RefreshResult } from '../api/types';
 
 export function useRuleActions() {
   /**
-   * Removes a device from a specific rule.
+   * Removes several devices from a rule in ONE request.
    * If the rule ends up with no targets, delete it entirely.
    * Otherwise update it with the remaining targets.
+   *
+   * Taking the whole list at once matters: one rule can target many devices,
+   * so removing them with successive single-device calls would each send a
+   * target list built from the same stale `rule.targets` — every request
+   * would put back the devices the previous one removed.
    *
    * Returns:
    *   - refresh: number of republished payloads (for the user toast)
    *   - deleted: true if the rule was deleted entirely,
-   *              false if only the target was removed
+   *              false if only the targets were removed
    */
-  async function resetRuleForDevice(
-    deviceIeee: string,
+  async function removeDevicesFromRule(
+    deviceIeees: string[],
     rule: AppliedRule,
   ): Promise<{ refresh: RefreshResult; deleted: boolean }> {
-    const newTargets = rule.targets.filter((t) => t.toLowerCase() !== deviceIeee.toLowerCase());
+    const removed = new Set(deviceIeees.map((i) => i.toLowerCase()));
+    const newTargets = rule.targets.filter((t) => !removed.has(t.toLowerCase()));
 
     if (newTargets.length === 0) {
       const res = await api.deleteTransformer(rule.id);
@@ -43,5 +49,13 @@ export function useRuleActions() {
     return { refresh: res.refresh, deleted: false };
   }
 
-  return { resetRuleForDevice };
+  /** Removes a single device from a rule (the ✕ button on a rule row). */
+  function resetRuleForDevice(
+    deviceIeee: string,
+    rule: AppliedRule,
+  ): Promise<{ refresh: RefreshResult; deleted: boolean }> {
+    return removeDevicesFromRule([deviceIeee], rule);
+  }
+
+  return { resetRuleForDevice, removeDevicesFromRule };
 }

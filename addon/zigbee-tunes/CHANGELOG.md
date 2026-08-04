@@ -15,11 +15,17 @@ follows [Semantic Versioning](https://semver.org/).
   so devices normalized identically share a colour and an edited device
   visually leaves its group. `entity-rename` stays neutral — its value is
   unique per device.
-- A legend above the list recaps every configuration in use with its colour
-  and how many devices share it.
+- A **Configurations** list above the devices, one line per distinct
+  configuration with its colour, values and how many devices use it. Each
+  line can be edited for all its devices at once, or removed from all of
+  them.
+- Editing happens in a dialog, which asks **what to apply the change to**
+  before showing the values: that device alone — it becomes a separate
+  configuration — or every device using it. The question only appears when
+  the configuration is actually shared, and the default never touches other
+  devices.
 
-Saving an edit reuses the existing smart-apply path: one atomic refresh, and
-devices that shared the original rule are left untouched.
+Saving an edit reuses the existing smart-apply path: one atomic refresh.
 
 ## 1.0.0 — First public release
 
