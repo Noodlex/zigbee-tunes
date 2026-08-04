@@ -43,6 +43,15 @@ const scopeChoosable = computed(
 
 const sharedNames = computed(() => props.sharedDevices.map((d) => d.friendly_name).join(', '));
 
+/**
+ * Name to show when a single device is affected. Opening from the
+ * Configurations list leaves `device` null, so fall back to the only device
+ * using that configuration — otherwise the recap would name nobody.
+ */
+const singleTargetName = computed(
+  () => props.device?.friendly_name ?? props.sharedDevices[0]?.friendly_name ?? '',
+);
+
 // Prime the fields every time the dialog opens, so a cancelled edit never
 // leaks its values into the next one.
 watch(show, (open) => {
@@ -118,6 +127,9 @@ function onSave() {
     <div v-if="rule" class="modal-body">
       <p class="modal-subtitle">
         <template v-if="device">{{ device.friendly_name }}</template>
+        <!-- Opened from the Configurations list: name the device when only
+             one uses it, rather than calling it "shared by 1 device". -->
+        <template v-else-if="sharedDevices.length === 1">{{ singleTargetName }}</template>
         <template v-else>{{ t('customizations.modal_shared', { count: sharedDevices.length }) }}</template>
       </p>
 
@@ -160,7 +172,7 @@ function onSave() {
             {{ t('customizations.modal_targets_many', { count: targets.length }) }}
           </template>
           <template v-else>
-            {{ t('customizations.modal_targets_one', { device: device?.friendly_name ?? '' }) }}
+            {{ t('customizations.modal_targets_one', { device: singleTargetName }) }}
           </template>
         </span>
         <NSpace :size="8">

@@ -11,8 +11,10 @@ import {
   NEllipsis,
   NEmpty,
   NPopconfirm,
+  NIcon,
   useMessage,
 } from 'naive-ui';
+import { IconPencil, IconTrash } from '../components/icons';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
 import { useTheme } from '../composables/useTheme';
@@ -300,15 +302,17 @@ onMounted(refresh);
           <div class="config-devices" :title="e.devices.map((d) => d.friendly_name).join(', ')">
             {{ t('customizations.configs_devices', { count: e.devices.length }) }}
           </div>
-          <div class="config-actions">
+          <div class="row-actions">
             <NButton
-              size="tiny"
+              size="small"
               quaternary
+              circle
               :disabled="saving"
+              :aria-label="t('customizations.legend_edit_title', { count: e.devices.length })"
               :title="t('customizations.legend_edit_title', { count: e.devices.length })"
               @click="openConfigEdit(e)"
             >
-              {{ t('common.edit') }}
+              <template #icon><NIcon><component :is="IconPencil" /></NIcon></template>
             </NButton>
             <NPopconfirm
               :on-positive-click="() => deleteConfiguration(e)"
@@ -317,13 +321,15 @@ onMounted(refresh);
             >
               <template #trigger>
                 <NButton
-                  size="tiny"
+                  size="small"
                   quaternary
+                  circle
                   type="error"
                   :disabled="saving"
+                  :aria-label="t('customizations.legend_delete_title', { count: e.devices.length })"
                   :title="t('customizations.legend_delete_title', { count: e.devices.length })"
                 >
-                  ✕
+                  <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
                 </NButton>
               </template>
               {{ t('customizations.legend_delete_confirm', { count: e.devices.length }) }}
@@ -386,8 +392,16 @@ onMounted(refresh);
                 :negative-text="t('common.cancel')"
               >
                 <template #trigger>
-                  <NButton size="small" quaternary type="error">
-                    ✕ {{ group.rules.length }}
+                  <NButton
+                    size="small"
+                    quaternary
+                    type="error"
+                    :disabled="saving"
+                    :aria-label="t('customizations.remove_all_title', { count: group.rules.length, device: group.device.friendly_name })"
+                    :title="t('customizations.remove_all_title', { count: group.rules.length, device: group.device.friendly_name })"
+                  >
+                    <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                    {{ group.rules.length }}
                   </NButton>
                 </template>
                 {{ t('customizations.remove_title', { type: '*', device: group.device.friendly_name }) }}
@@ -418,26 +432,38 @@ onMounted(refresh);
                 <span class="rule-config-text">{{ describeRule(r, t) }}</span>
               </div>
 
-              <div class="rule-action">
+              <div class="row-actions">
                 <NButton
                   size="small"
                   quaternary
+                  circle
                   :disabled="saving"
+                  :aria-label="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
                   :title="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
                   @click="openDeviceEdit(group.device, r)"
                 >
-                  {{ t('common.edit') }}
+                  <template #icon><NIcon><component :is="IconPencil" /></NIcon></template>
                 </NButton>
-                <NButton
-                  size="small"
-                  type="error"
-                  ghost
-                  :disabled="saving"
-                  :title="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
-                  @click="onResetRule(group.device.ieee, r)"
+                <NPopconfirm
+                  :on-positive-click="() => onResetRule(group.device.ieee, r)"
+                  :positive-text="t('common.remove')"
+                  :negative-text="t('common.cancel')"
                 >
-                  {{ t('customizations.remove_button') }}
-                </NButton>
+                  <template #trigger>
+                    <NButton
+                      size="small"
+                      quaternary
+                      circle
+                      type="error"
+                      :disabled="saving"
+                      :aria-label="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
+                      :title="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
+                    >
+                      <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                    </NButton>
+                  </template>
+                  {{ t('customizations.remove_title', { type: r.type, device: group.device.friendly_name }) }}
+                </NPopconfirm>
               </div>
             </div>
           </div>
@@ -581,11 +607,6 @@ onMounted(refresh);
   color: var(--zt-text-secondary, #555);
 }
 
-.rule-action {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
 
 /* Configurations: one line per distinct configuration, so a fleet with a
    dozen of them stays scannable and the colours map to actual values.
@@ -633,10 +654,12 @@ onMounted(refresh);
   cursor: default;
 }
 
-.config-actions {
+/* Same action pair everywhere: pencil to edit, bin to remove, identical
+   size and variant in the configuration list and on the device rows. */
+.row-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 4px;
 }
 
 @media (max-width: 720px) {
