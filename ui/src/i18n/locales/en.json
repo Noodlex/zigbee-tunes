@@ -76,11 +76,12 @@
     "device_capability": "what this device supports · {min}–{max}",
     "unit_mireds": "mireds",
     "range_inverted": "min must not be above max",
+    "cct_no_common_range": "these devices share no common range — a rule can't suit them all",
     "cct_missing_data": "{count} device(s) without native data (Z2M must publish on z2m_discovery)"
   },
   "customizations": {
     "title": "Customizations",
-    "description": "One row per specific configuration rule applied to a device. The ✕ button removes the rule for this device only (the rule is fully deleted if it only targeted this device). The global rule (e.g. {targetsAll}) keeps running in the background.",
+    "description": "One row per specific configuration rule applied to a device. Removing on a device row only affects that device (the rule is fully deleted if it only targeted it); removing on a configuration affects every device using it. The global rule (e.g. {targetsAll}) keeps running in the background.",
     "search_placeholder": "Search name, IEEE, vendor, model, type, configuration...",
     "empty": "No device with a custom configuration",
     "remove_title": "Remove {type} for {device}",

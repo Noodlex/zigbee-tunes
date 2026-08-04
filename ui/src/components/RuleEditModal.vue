@@ -172,17 +172,21 @@ function onSave() {
     <template #footer>
       <div class="modal-footer">
         <!-- Spells out the blast radius right next to the Save button, and
-             stands out as soon as more than one device is about to change. -->
-        <span v-if="!isRangeOrdered(min, max)" class="range-error">
-          {{ t('panel.range_inverted') }}
-        </span>
-        <span v-else class="targets-recap" :class="{ 'targets-recap-many': targets.length > 1 }">
-          <template v-if="targets.length > 1">
-            {{ t('customizations.modal_targets_many', { count: targets.length }) }}
-          </template>
-          <template v-else>
-            {{ t('customizations.modal_targets_one', { device: singleTargetName }) }}
-          </template>
+             stands out as soon as more than one device is about to change.
+             It stays visible while an inverted range is being fixed — that is
+             exactly when knowing the scope matters. -->
+        <span class="footer-status">
+          <span v-if="!isRangeOrdered(min, max)" class="range-error">
+            {{ t('panel.range_inverted') }} ·
+          </span>
+          <span class="targets-recap" :class="{ 'targets-recap-many': targets.length > 1 }">
+            <template v-if="targets.length > 1">
+              {{ t('customizations.modal_targets_many', { count: targets.length }) }}
+            </template>
+            <template v-else>
+              {{ t('customizations.modal_targets_one', { device: singleTargetName }) }}
+            </template>
+          </span>
         </span>
         <NSpace :size="8">
           <NButton size="small" quaternary :disabled="saving" @click="show = false">
@@ -257,6 +261,13 @@ function onSave() {
 .targets-recap-many {
   font-weight: 600;
   color: var(--zt-text-warning, #f0a020);
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .range-error {

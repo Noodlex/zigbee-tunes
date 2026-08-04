@@ -76,11 +76,12 @@
     "device_capability": "capacité de l'appareil · {min}–{max}",
     "unit_mireds": "mireds",
     "range_inverted": "le min ne doit pas dépasser le max",
+    "cct_no_common_range": "ces appareils n'ont aucune plage commune — aucune règle ne peut convenir à tous",
     "cct_missing_data": "{count} appareil(s) sans donnée native (Z2M doit publier sur z2m_discovery)"
   },
   "customizations": {
     "title": "Personnalisations",
-    "description": "Une ligne par règle de configuration spécifique appliquée à un appareil. Le bouton ✕ retire la règle pour cet appareil uniquement (la règle est entièrement supprimée si elle ne ciblait que cet appareil). La règle globale (ex. {targetsAll}) reste active en arrière-plan.",
+    "description": "Une ligne par règle de configuration spécifique appliquée à un appareil. Retirer sur la ligne d'un appareil n'affecte que celui-ci (la règle est entièrement supprimée si elle ne ciblait que lui) ; retirer sur une configuration l'enlève de tous les appareils qui l'utilisent. La règle globale (ex. {targetsAll}) reste active en arrière-plan.",
     "search_placeholder": "Rechercher nom, IEEE, fabricant, modèle, type, configuration...",
     "empty": "Aucun appareil avec configuration personnalisée",
     "remove_title": "Retirer {type} pour {device}",

@@ -95,10 +95,26 @@ const rangeValue = computed<[number, number]>({
   set: ([low, high]: [number, number]) => {
     const [currentLow, currentHigh] = rangeValue.value;
     // naive-ui lets a handle be dragged past the other and emits the crossed
-    // array as-is, so the moved handle is stopped at its neighbour here —
-    // an inverted range would leave Home Assistant an empty window.
-    if (low !== currentLow) min.value = Math.min(low, currentHigh);
-    if (high !== currentHigh) max.value = Math.max(high, currentLow);
+    // array as-is. Stopping the handle dead would stack the two on the same
+    // value, and naive-ui then resolves every later rail click to handle 0,
+    // leaving the slider unusable. Swapping the roles instead keeps the drag
+    // meaningful and the range non-empty.
+    if (low !== currentLow) {
+      if (low > currentHigh) {
+        min.value = currentHigh;
+        max.value = low;
+      } else {
+        min.value = low;
+      }
+    }
+    if (high !== currentHigh) {
+      if (high < currentLow) {
+        max.value = currentLow;
+        min.value = high;
+      } else {
+        max.value = high;
+      }
+    }
   },
 });
 
@@ -113,8 +129,17 @@ const rangeValue = computed<[number, number]>({
  * left untouched.
  */
 watch(bounds, ([low, high]) => {
-  if (min.value !== null) min.value = Math.min(high, Math.max(low, min.value));
-  if (max.value !== null) max.value = Math.min(high, Math.max(low, max.value));
+  const clamp = (v: number) => Math.min(high, Math.max(low, v));
+  const nextMin = min.value === null ? null : clamp(min.value);
+  const nextMax = max.value === null ? null : clamp(max.value);
+  // Never flatten a range the user actually set: if the narrower axis can't
+  // hold both bounds apart, keep them as they are. The transformer refuses to
+  // apply a rule a device can't honour, so an out-of-axis value is harmless.
+  if (nextMin !== null && nextMax !== null && nextMin === nextMax && min.value !== max.value) {
+    return;
+  }
+  min.value = nextMin;
+  max.value = nextMax;
 });
 
 /**
@@ -284,6 +309,12 @@ function formatScale(value: number): string {
         </span>
       </div>
 
+      <!-- No value can suit everyone: say so, otherwise the missing band just
+           looks like there is nothing to report. -->
+      <div v-if="cct.hasData && !cct.hasSafeZone" class="slider-warning">
+        {{ t('panel.cct_no_common_range') }}
+      </div>
+
       <div v-if="cct.missing > 0" class="slider-warning">
         {{ t('panel.cct_missing_data', { count: cct.missing }) }}
       </div>
@@ -444,8 +475,8 @@ function formatScale(value: number): string {
   background-image: linear-gradient(to right, #9bd0ea, #f3f0ea, #ffc98a);
 }
 
-/* label | value | kelvin — one row per bound, plus the unit switch under the
-   value column so it reads as belonging to those fields. */
+/* label | value | kelvin — one row per bound. The unit switch sits below in
+   its own row, shared by both range types. */
 .numeric-grid {
   display: grid;
   grid-template-columns: auto 110px 1fr;

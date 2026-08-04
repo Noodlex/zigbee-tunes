@@ -30,6 +30,19 @@ export class ColorTempRangeTransformer implements DiscoveryTransformer {
     if (this.rule.max_mireds !== undefined && hasMax) {
       out.max_mireds = Math.min(payload.max_mireds!, this.rule.max_mireds);
     }
+
+    // The rule and the device may not overlap at all — a rule asking for
+    // "no cooler than 500" against a bulb that stops at 454 would otherwise
+    // emit min_mireds 500 / max_mireds 454. Home Assistant would get an empty
+    // window and show a broken slider, so leave such a device alone: the
+    // range it advertises is the only one it can honour.
+    if (
+      typeof out.min_mireds === 'number' &&
+      typeof out.max_mireds === 'number' &&
+      out.min_mireds > out.max_mireds
+    ) {
+      return payload;
+    }
     return out;
   }
 }
