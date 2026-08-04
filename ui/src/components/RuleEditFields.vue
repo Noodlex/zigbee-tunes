@@ -3,10 +3,16 @@
 // edit a rule in Customizations: a single device's row, and a configuration
 // line (which edits every device using it at once).
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { NInput, NInputNumber, NSlider, NRadioGroup, NRadioButton } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
-import { miredsToKelvin, brightnessPercent, cctRangeStats } from '../utils/rules';
+import {
+  miredsToKelvin,
+  brightnessPercent,
+  cctRangeStats,
+  BRIGHTNESS_SCALE_MIN as BRIGHTNESS_MIN,
+  BRIGHTNESS_SCALE_MAX as BRIGHTNESS_MAX,
+} from '../utils/rules';
 import type { Device, TransformerType } from '../api/types';
 
 const props = defineProps<{
@@ -28,10 +34,6 @@ const { t } = useI18n();
 /** Widest range the parser accepts, used when no native data is known. */
 const FALLBACK_MIN = 100;
 const FALLBACK_MAX = 700;
-
-/** Zigbee brightness scale. 254 is the native maximum, i.e. "no limit". */
-const BRIGHTNESS_MIN = 1;
-const BRIGHTNESS_MAX = 254;
 
 const cct = computed(() => cctRangeStats(props.devices));
 
@@ -69,8 +71,10 @@ const bounds = computed<[number, number]>(() => {
  * do. Null hides the band and its caption.
  */
 const safeBandStyle = computed<Record<string, string> | null>(() => {
-  const { hasData, safeMin, safeMax } = cct.value;
-  if (!hasData || safeMin === null || safeMax === null) return null;
+  const { hasData, hasSafeZone, safeMin, safeMax } = cct.value;
+  // No overlap between the devices: there is no value that suits them all, so
+  // don't draw a band that would imply one exists.
+  if (!hasData || !hasSafeZone || safeMin === null || safeMax === null) return null;
   const [low, high] = bounds.value;
   if (high === low) return null;
   if (safeMin <= low && safeMax >= high) return null; // covers everything
@@ -90,9 +94,27 @@ const rangeValue = computed<[number, number]>({
   get: (): [number, number] => [min.value ?? bounds.value[0], max.value ?? bounds.value[1]],
   set: ([low, high]: [number, number]) => {
     const [currentLow, currentHigh] = rangeValue.value;
-    if (low !== currentLow) min.value = low;
-    if (high !== currentHigh) max.value = high;
+    // naive-ui lets a handle be dragged past the other and emits the crossed
+    // array as-is, so the moved handle is stopped at its neighbour here —
+    // an inverted range would leave Home Assistant an empty window.
+    if (low !== currentLow) min.value = Math.min(low, currentHigh);
+    if (high !== currentHigh) max.value = Math.max(high, currentLow);
   },
+});
+
+/**
+ * Keep the values inside the axis when the axis itself moves — switching the
+ * dialog's scope to a narrower device, or deselecting the widest one in the
+ * creation panel. Without this the number field would show a value the slider
+ * pins elsewhere, and a percentage could read past 100%.
+ *
+ * It never fires on open: the bounds are widened by the values the editor
+ * opened with, so a stored rule reaching beyond what its devices support is
+ * left untouched.
+ */
+watch(bounds, ([low, high]) => {
+  if (min.value !== null) min.value = Math.min(high, Math.max(low, min.value));
+  if (max.value !== null) max.value = Math.min(high, Math.max(low, max.value));
 });
 
 /**
@@ -141,6 +163,11 @@ const maxPercent = computed<number | null>({
 type Unit = 'absolute' | 'percent';
 const unit = ref<Unit>('absolute');
 const isPercent = computed(() => unit.value === 'percent');
+
+/** Only the numeric transformers offer a slider and a unit switch. */
+const isRangeType = computed(
+  () => props.type === 'color-temp-range' || props.type === 'brightness-range',
+);
 
 /** Label of the raw unit, which differs per transformer. */
 const absoluteUnitLabel = computed(() =>
@@ -289,12 +316,6 @@ function formatScale(value: number): string {
         />
         <span class="field-hint">{{ kelvinLabel(max) }}</span>
 
-        <span />
-        <NRadioGroup v-model:value="unit" size="small">
-          <NRadioButton value="absolute">{{ absoluteUnitLabel }}</NRadioButton>
-          <NRadioButton value="percent">%</NRadioButton>
-        </NRadioGroup>
-        <span />
       </div>
     </template>
 
@@ -326,12 +347,6 @@ function formatScale(value: number): string {
           <span class="field-native">{{ t('panel.field_brightness_hint') }}</span>
         </span>
 
-        <span />
-        <NRadioGroup v-model:value="unit" size="small">
-          <NRadioButton value="absolute">{{ absoluteUnitLabel }}</NRadioButton>
-          <NRadioButton value="percent">%</NRadioButton>
-        </NRadioGroup>
-        <span />
       </div>
     </template>
 
@@ -345,6 +360,15 @@ function formatScale(value: number): string {
       clearable
       style="max-width: 280px"
     />
+
+    <!-- Rendered once for both range types: the switch means the same thing
+         in each, only the raw unit's name differs. -->
+    <div v-if="isRangeType" class="unit-row">
+      <NRadioGroup v-model:value="unit" size="small">
+        <NRadioButton value="absolute">{{ absoluteUnitLabel }}</NRadioButton>
+        <NRadioButton value="percent">%</NRadioButton>
+      </NRadioGroup>
+    </div>
   </div>
 </template>
 
@@ -429,11 +453,12 @@ function formatScale(value: number): string {
   align-items: center;
 }
 
-.numeric-row {
+.unit-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+}
+
+.slider-block {
+  padding-bottom: 2px;
 }
 
 .field-label {
@@ -445,10 +470,6 @@ function formatScale(value: number): string {
   font-size: 11px;
   color: var(--zt-text-hint, #888);
   min-width: 44px;
-}
-
-.field-sep {
-  color: var(--zt-text-info, #666);
 }
 
 .field-native {

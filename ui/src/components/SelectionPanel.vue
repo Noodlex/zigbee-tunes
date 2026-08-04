@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { NCard, NSpace, NButton, NTag, NAlert } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
+import { isRangeOrdered } from '../utils/rules';
 import type { Device, TransformerType } from '../api/types';
 
 const { t } = useI18n();
@@ -46,12 +47,16 @@ function reset() {
 }
 
 const hasColorTempChange = computed(() => colorTempMin.value !== null || colorTempMax.value !== null);
+/** Refuse to create a rule whose bounds are inverted (empty clamp window). */
+const colorTempOrdered = computed(() => isRangeOrdered(colorTempMin.value, colorTempMax.value));
 const hasBrightnessChange = computed(() => brightnessMaxScale.value !== null);
 const hasAreaChange = computed(() => area.value.trim().length > 0);
 const hasRenameChange = computed(() => deviceName.value.trim().length > 0);
 const hasAnyChange = computed(
   () => hasColorTempChange.value || hasBrightnessChange.value || hasAreaChange.value || hasRenameChange.value,
 );
+
+const canApply = computed(() => hasAnyChange.value && colorTempOrdered.value);
 
 const conflicts = computed(() => {
   const result: Array<{ device: Device; type: TransformerType }> = [];
@@ -83,7 +88,7 @@ function build(): Changes {
 }
 
 function onApply() {
-  if (!hasAnyChange.value || props.loading) return;
+  if (!canApply.value || props.loading) return;
   emit('apply', build());
 }
 </script>
@@ -147,6 +152,9 @@ function onApply() {
       <!-- Conflicts + apply button -->
       <div class="panel-footer">
         <div class="conflicts-zone">
+          <NAlert v-if="!colorTempOrdered" type="error" :show-icon="false" size="small">
+            <span style="font-size: 12px">{{ t('panel.range_inverted') }}</span>
+          </NAlert>
           <NAlert v-if="conflicts.length > 0" type="warning" :show-icon="false" size="small">
             <template #header>
               <span style="font-weight: 600; font-size: 12px">{{ t('panel.conflicts_header', { count: conflicts.length }) }}</span>
@@ -160,7 +168,7 @@ function onApply() {
         </div>
         <NButton
           type="primary"
-          :disabled="!hasAnyChange || loading"
+          :disabled="!canApply || loading"
           :loading="loading"
           @click="onApply"
           size="small"

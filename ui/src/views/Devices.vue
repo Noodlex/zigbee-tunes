@@ -23,6 +23,7 @@ import RuleEditModal from '../components/RuleEditModal.vue';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
 import { useConfigurations } from '../composables/useConfigurations';
+import { useRuleEditDialog } from '../composables/useRuleEditDialog';
 import { specificRulesFor } from '../utils/rules';
 import type { Device, AppliedRule } from '../api/types';
 
@@ -243,41 +244,12 @@ async function onApply(changes: Changes) {
  */
 const { resetRuleForDevice } = useRuleActions();
 
-// --- Edit dialog -----------------------------------------------------------
 // Opened from a card's rule list, so a value can be corrected without leaving
-// the grid. Same dialog as Customizations, scope question included.
-const editOpen = ref(false);
-const editRule = ref<AppliedRule | null>(null);
-const editDevice = ref<Device | null>(null);
-const editSharedDevices = ref<Device[]>([]);
-const savingEdit = ref(false);
+// the grid. Same dialog and same save path as Customizations.
+const edit = useRuleEditDialog(refresh);
 
 function openEdit(device: Device, rule: AppliedRule) {
-  editRule.value = rule;
-  editDevice.value = device;
-  const shared = sharedDevicesFor(rule);
-  editSharedDevices.value = shared.length > 0 ? shared : [device];
-  editOpen.value = true;
-}
-
-async function onEditSave(payload: { targets: string[]; values: Record<string, unknown> }) {
-  if (savingEdit.value) return;
-  savingEdit.value = true;
-  try {
-    const res = await api.applyToDevices(payload.targets, [payload.values]);
-    message.success(
-      t('customizations.edit_success', {
-        count: payload.targets.length,
-        republished: res.refresh.republished,
-      }),
-    );
-    editOpen.value = false;
-    await refresh();
-  } catch (e) {
-    message.error(t('common.failure_prefix', { message: (e as Error).message }));
-  } finally {
-    savingEdit.value = false;
-  }
+  edit.openForDevice(device, rule, sharedDevicesFor(rule));
 }
 
 async function resetRule(deviceIeee: string, rule: AppliedRule) {
@@ -392,12 +364,12 @@ onMounted(refresh);
     </NSpin>
 
     <RuleEditModal
-      v-model:show="editOpen"
-      :rule="editRule"
-      :device="editDevice"
-      :shared-devices="editSharedDevices"
-      :saving="savingEdit"
-      @save="onEditSave"
+      v-model:show="edit.open.value"
+      :rule="edit.rule.value"
+      :device="edit.device.value"
+      :shared-devices="edit.sharedDevices.value"
+      :saving="edit.saving.value"
+      @save="edit.onSave"
     />
   </NSpace>
 </template>

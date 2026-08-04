@@ -8,6 +8,7 @@ import { computed, ref, watch } from 'vue';
 import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
+import { isRangeOrdered } from '../utils/rules';
 import type { AppliedRule, Device } from '../api/types';
 
 const props = defineProps<{
@@ -75,7 +76,8 @@ const valid = computed(() => {
   if (!rule) return false;
   switch (rule.type) {
     case 'color-temp-range':
-      return min.value !== null || max.value !== null;
+      // An inverted range would hand Home Assistant an empty window.
+      return (min.value !== null || max.value !== null) && isRangeOrdered(min.value, max.value);
     case 'brightness-range':
       return scale.value !== null;
     default:
@@ -171,7 +173,10 @@ function onSave() {
       <div class="modal-footer">
         <!-- Spells out the blast radius right next to the Save button, and
              stands out as soon as more than one device is about to change. -->
-        <span class="targets-recap" :class="{ 'targets-recap-many': targets.length > 1 }">
+        <span v-if="!isRangeOrdered(min, max)" class="range-error">
+          {{ t('panel.range_inverted') }}
+        </span>
+        <span v-else class="targets-recap" :class="{ 'targets-recap-many': targets.length > 1 }">
           <template v-if="targets.length > 1">
             {{ t('customizations.modal_targets_many', { count: targets.length }) }}
           </template>
@@ -252,5 +257,11 @@ function onSave() {
 .targets-recap-many {
   font-weight: 600;
   color: var(--zt-text-warning, #f0a020);
+}
+
+.range-error {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zt-text-error, #d03050);
 }
 </style>

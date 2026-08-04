@@ -26,8 +26,6 @@ interface ConfigurationsApi {
   list: ComputedRef<ConfigEntry[]>;
   /** Colour for a rule's tag: same values -> same colour. */
   tagStyle: (rule: AppliedRule) => TagStyle;
-  /** Devices using a given signature. */
-  devicesForSignature: (sig: string) => Device[];
   /** Devices sharing a rule's configuration, the rule's own device included. */
   sharedDevicesFor: (rule: AppliedRule) => Device[];
 }
@@ -73,15 +71,11 @@ export function useConfigurations(devices: Ref<Device[]>): ConfigurationsApi {
     return index === undefined ? neutralTagStyle(isDark.value) : signatureStyle(index, isDark.value);
   }
 
-  function devicesForSignature(sig: string): Device[] {
-    return list.value.find((e) => e.sig === sig)?.devices ?? [];
-  }
-
   function sharedDevicesFor(rule: AppliedRule): Device[] {
     const sig = ruleSignature(rule);
     if (sig === null) return [];
-    return devicesForSignature(sig);
+    return list.value.find((e) => e.sig === sig)?.devices ?? [];
   }
 
-  return { list, tagStyle, devicesForSignature, sharedDevicesFor };
+  return { list, tagStyle, sharedDevicesFor };
 }

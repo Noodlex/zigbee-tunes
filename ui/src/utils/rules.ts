@@ -11,9 +11,23 @@ export function miredsToKelvin(mireds: number): number {
   return Math.round(1_000_000 / mireds);
 }
 
+/** Zigbee brightness scale bounds. 254 is the native maximum, i.e. "no limit". */
+export const BRIGHTNESS_SCALE_MIN = 1;
+export const BRIGHTNESS_SCALE_MAX = 254;
+
 /** Convert a brightness scale (1..254) to a 0..100 percentage. */
 export function brightnessPercent(scale: number): number {
-  return Math.round((scale / 254) * 100);
+  return Math.round((scale / BRIGHTNESS_SCALE_MAX) * 100);
+}
+
+/**
+ * A colour-temperature rule must not invert its bounds: min above max leaves
+ * Home Assistant with an empty window, so the editors refuse to save it.
+ * Either bound alone is fine — a rule can clamp one side only.
+ */
+export function isRangeOrdered(min: number | null, max: number | null): boolean {
+  if (min === null || max === null) return true;
+  return min <= max;
 }
 
 /**
@@ -30,6 +44,12 @@ export function specificRulesFor(device: Device): AppliedRule[] {
 export interface CctRangeStats {
   /** False when no selected device advertises a native CCT range. */
   hasData: boolean;
+  /**
+   * False when the devices have no overlap at all (a cool-only bulb next to a
+   * warm-only one): `safeMin` then sits ABOVE `safeMax` and no value can
+   * satisfy everyone, so callers must not present it as a usable range.
+   */
+  hasSafeZone: boolean;
   /** Devices with color_temp that haven't published their range yet. */
   missing: number;
   /** Widest span any device can reach: [min of mins, max of maxs]. */
@@ -68,6 +88,7 @@ export function cctRangeStats(devices: Device[]): CctRangeStats {
   if (mins.length === 0) {
     return {
       hasData: false,
+      hasSafeZone: false,
       missing,
       unionLow: null,
       unionHigh: null,
@@ -75,13 +96,16 @@ export function cctRangeStats(devices: Device[]): CctRangeStats {
       safeMax: null,
     };
   }
+  const safeMin = Math.max(...mins);
+  const safeMax = Math.min(...maxs);
   return {
     hasData: true,
+    hasSafeZone: safeMin <= safeMax,
     missing,
     unionLow: Math.min(...mins),
     unionHigh: Math.max(...maxs),
-    safeMin: Math.max(...mins),
-    safeMax: Math.min(...maxs),
+    safeMin,
+    safeMax,
   };
 }
 

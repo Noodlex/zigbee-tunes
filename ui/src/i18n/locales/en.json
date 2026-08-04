@@ -52,7 +52,7 @@
     "popover_title": "Configuration specific to this device",
     "popover_edit_title": "Edit {type}",
     "popover_remove_title": "Remove {type} for this device",
-    "popover_hint": "The ✕ removes the rule for THIS device only.",
+    "popover_hint": "Removing here only affects THIS device.",
     "capability_modified_title": "{capability} is currently overridden by a Zigbee Tunes rule"
   },
   "panel": {
@@ -75,6 +75,7 @@
     "cct_safe_intersection": "safe intersection: {min} → {max}",
     "device_capability": "what this device supports · {min}–{max}",
     "unit_mireds": "mireds",
+    "range_inverted": "min must not be above max",
     "cct_missing_data": "{count} device(s) without native data (Z2M must publish on z2m_discovery)"
   },
   "customizations": {

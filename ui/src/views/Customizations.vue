@@ -18,6 +18,7 @@ import { IconPencil, IconTrash } from '../components/icons';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
 import { useConfigurations, type ConfigEntry } from '../composables/useConfigurations';
+import { useRuleEditDialog } from '../composables/useRuleEditDialog';
 import RuleEditModal from '../components/RuleEditModal.vue';
 import { describeRule, ruleSignature, specificRulesFor } from '../utils/rules';
 import { isZ2mGroup } from '../utils/devices';
@@ -75,63 +76,24 @@ const filtered = computed<DeviceGroup[]>(() => {
 
 const { list: configurations, tagStyle, sharedDevicesFor } = useConfigurations(devices);
 
-// --- Edit dialog -----------------------------------------------------------
 // A configuration (a signature: type + values) can be shared by several
 // devices, so editing one from a device row is ambiguous: change it for that
 // device alone, or for everyone using it? The dialog asks before showing the
-// values — same idea as editing one occurrence of a recurring event versus
-// the whole series. Opening it from the Configurations list is always the
-// series, so no question is asked there.
-const editOpen = ref(false);
-const editRule = ref<AppliedRule | null>(null);
-const editDevice = ref<Device | null>(null);
-const editSharedDevices = ref<Device[]>([]);
-const saving = ref(false);
+// values. Opening it from the Configurations list is always the whole set, so
+// no question is asked there.
+const edit = useRuleEditDialog(refresh);
 
 function openDeviceEdit(device: Device, rule: AppliedRule) {
-  editRule.value = rule;
-  editDevice.value = device;
-  // entity-rename has no signature (its value is unique per device), so it
-  // is never shared and the dialog won't offer a scope.
-  const shared = sharedDevicesFor(rule);
-  editSharedDevices.value = shared.length > 0 ? shared : [device];
-  editOpen.value = true;
+  edit.openForDevice(device, rule, sharedDevicesFor(rule));
 }
 
 function openConfigEdit(entry: ConfigEntry) {
-  editRule.value = entry.rule;
-  editDevice.value = null;
-  editSharedDevices.value = entry.devices;
-  editOpen.value = true;
+  edit.openForConfiguration(entry.rule, entry.devices);
 }
 
-/**
- * Saves through the same smart-apply endpoint the Devices view uses: the
- * backend drops the targeted devices from the existing rules of that type
- * (deleting a rule left without targets) and recreates one rule with the new
- * values, in a single atomic refresh. Targeting the single device makes it
- * leave its group as a separate configuration; targeting them all moves the
- * whole configuration and keeps it a single rule.
- */
-async function onEditSave(payload: { targets: string[]; values: Record<string, unknown> }) {
-  if (saving.value) return;
-  saving.value = true;
-  try {
-    const res = await api.applyToDevices(payload.targets, [payload.values]);
-    message.success(
-      t('customizations.edit_success', {
-        count: payload.targets.length,
-        republished: res.refresh.republished,
-      }),
-    );
-    editOpen.value = false;
-    await refresh();
-  } catch (e) {
-    message.error(t('common.failure_prefix', { message: (e as Error).message }));
-  } finally {
-    saving.value = false;
-  }
-}
+/** Any write in flight — every row action is disabled while one runs. */
+const deleting = ref(false);
+const busy = computed(() => deleting.value || edit.saving.value);
 
 /**
  * Removes a whole configuration: every device using it loses the rule.
@@ -141,7 +103,7 @@ async function onEditSave(payload: { targets: string[]; values: Record<string, u
  * the same stale rule and put back what the previous call removed.
  */
 async function deleteConfiguration(entry: ConfigEntry) {
-  if (saving.value) return;
+  if (busy.value) return;
   const byRule = new Map<number, { rule: AppliedRule; ieees: string[] }>();
   for (const g of allGroups.value) {
     for (const r of g.rules) {
@@ -151,7 +113,7 @@ async function deleteConfiguration(entry: ConfigEntry) {
       else byRule.set(r.id, { rule: r, ieees: [g.device.ieee] });
     }
   }
-  saving.value = true;
+  deleting.value = true;
   let republished = 0;
   try {
     for (const { rule, ieees } of byRule.values()) {
@@ -166,7 +128,7 @@ async function deleteConfiguration(entry: ConfigEntry) {
     message.error(t('common.failure_prefix', { message: (e as Error).message }));
     await refresh();
   } finally {
-    saving.value = false;
+    deleting.value = false;
   }
 }
 
@@ -242,7 +204,7 @@ onMounted(refresh);
               size="small"
               quaternary
               circle
-              :disabled="saving"
+              :disabled="busy"
               :aria-label="t('customizations.legend_edit_title', { count: e.devices.length })"
               :title="t('customizations.legend_edit_title', { count: e.devices.length })"
               @click="openConfigEdit(e)"
@@ -260,7 +222,7 @@ onMounted(refresh);
                   quaternary
                   circle
                   type="error"
-                  :disabled="saving"
+                  :disabled="busy"
                   :aria-label="t('customizations.legend_delete_title', { count: e.devices.length })"
                   :title="t('customizations.legend_delete_title', { count: e.devices.length })"
                 >
@@ -331,7 +293,7 @@ onMounted(refresh);
                     size="small"
                     quaternary
                     type="error"
-                    :disabled="saving"
+                    :disabled="busy"
                     :aria-label="t('customizations.remove_all_title', { count: group.rules.length, device: group.device.friendly_name })"
                     :title="t('customizations.remove_all_title', { count: group.rules.length, device: group.device.friendly_name })"
                   >
@@ -372,7 +334,7 @@ onMounted(refresh);
                   size="small"
                   quaternary
                   circle
-                  :disabled="saving"
+                  :disabled="busy"
                   :aria-label="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
                   :title="t('customizations.edit_title', { type: r.type, device: group.device.friendly_name })"
                   @click="openDeviceEdit(group.device, r)"
@@ -390,7 +352,7 @@ onMounted(refresh);
                       quaternary
                       circle
                       type="error"
-                      :disabled="saving"
+                      :disabled="busy"
                       :aria-label="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
                       :title="t('customizations.remove_title', { type: r.type, device: group.device.friendly_name })"
                     >
@@ -407,12 +369,12 @@ onMounted(refresh);
     </NSpin>
 
     <RuleEditModal
-      v-model:show="editOpen"
-      :rule="editRule"
-      :device="editDevice"
-      :shared-devices="editSharedDevices"
-      :saving="saving"
-      @save="onEditSave"
+      v-model:show="edit.open.value"
+      :rule="edit.rule.value"
+      :device="edit.device.value"
+      :shared-devices="edit.sharedDevices.value"
+      :saving="edit.saving.value"
+      @save="edit.onSave"
     />
   </NSpace>
 </template>
