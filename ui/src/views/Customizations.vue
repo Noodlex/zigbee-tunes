@@ -17,15 +17,9 @@ import {
 import { IconPencil, IconTrash } from '../components/icons';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
-import { useTheme } from '../composables/useTheme';
+import { useConfigurations, type ConfigEntry } from '../composables/useConfigurations';
 import RuleEditModal from '../components/RuleEditModal.vue';
-import {
-  describeRule,
-  ruleSignature,
-  signatureStyle,
-  neutralTagStyle,
-  type TagStyle,
-} from '../utils/rules';
+import { describeRule, ruleSignature, specificRulesFor } from '../utils/rules';
 import { isZ2mGroup } from '../utils/devices';
 import type { Device, AppliedRule } from '../api/types';
 
@@ -43,7 +37,6 @@ const search = ref('');
 
 const message = useMessage();
 const { resetRuleForDevice, removeDevicesFromRule } = useRuleActions();
-const { isDark } = useTheme();
 
 async function refresh() {
   loading.value = true;
@@ -61,9 +54,7 @@ async function refresh() {
 const allGroups = computed<DeviceGroup[]>(() => {
   const result: DeviceGroup[] = [];
   for (const d of devices.value) {
-    const specificRules = d.applied_rules.filter((r) =>
-      r.targets.some((tg) => tg.toLowerCase() === d.ieee.toLowerCase()),
-    );
+    const specificRules = specificRulesFor(d);
     if (specificRules.length === 0) continue;
     const rulesText = specificRules.map((r) => `${r.type} ${describeRule(r, t)}`).join(' ');
     result.push({
@@ -82,47 +73,7 @@ const filtered = computed<DeviceGroup[]>(() => {
   return allGroups.value.filter((g) => g.searchHay.includes(q));
 });
 
-interface ConfigEntry {
-  sig: string;
-  index: number;
-  rule: AppliedRule; // representative, for describeRule() and the type
-  devices: Device[]; // every device using this exact configuration
-}
-
-/**
- * Distinct rule signatures across the WHOLE list (not the filtered view) so
- * a colour keeps its meaning while the user types in the search box.
- * Sorted with a numeric-aware comparator so "min 90" lands before "min 153"
- * instead of string-sorting; the index drives the colour assignment.
- */
-const signatures = computed(() => {
-  const seen = new Map<string, { rule: AppliedRule; devices: Device[] }>();
-  for (const g of allGroups.value) {
-    for (const r of g.rules) {
-      const sig = ruleSignature(r);
-      if (sig === null) continue;
-      const entry = seen.get(sig);
-      if (entry) entry.devices.push(g.device);
-      else seen.set(sig, { rule: r, devices: [g.device] });
-    }
-  }
-  const ordered = [...seen.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  const index = new Map<string, number>();
-  const list: ConfigEntry[] = ordered.map((sig, i) => {
-    index.set(sig, i);
-    const e = seen.get(sig)!;
-    return { sig, index: i, rule: e.rule, devices: e.devices };
-  });
-  return { index, list };
-});
-
-/** Tag colour for a rule: same values -> same colour, different -> different. */
-function tagStyle(rule: AppliedRule): TagStyle {
-  const sig = ruleSignature(rule);
-  if (sig === null) return neutralTagStyle(isDark.value);
-  const index = signatures.value.index.get(sig);
-  return index === undefined ? neutralTagStyle(isDark.value) : signatureStyle(index, isDark.value);
-}
+const { list: configurations, tagStyle, sharedDevicesFor } = useConfigurations(devices);
 
 // --- Edit dialog -----------------------------------------------------------
 // A configuration (a signature: type + values) can be shared by several
@@ -137,29 +88,13 @@ const editDevice = ref<Device | null>(null);
 const editSharedDevices = ref<Device[]>([]);
 const saving = ref(false);
 
-/** Devices whose rules include this exact configuration. */
-function devicesForSignature(sig: string): Device[] {
-  return signatures.value.list.find((e) => e.sig === sig)?.devices ?? [];
-}
-
-/**
- * How many devices share a rule's configuration. Surfaced on the row so the
- * sharing is visible BEFORE opening the dialog — otherwise you can't tell
- * whether editing here would affect other devices too.
- */
-function sharedDevicesFor(rule: AppliedRule): Device[] {
-  const sig = ruleSignature(rule);
-  if (sig === null) return [];
-  return devicesForSignature(sig);
-}
-
 function openDeviceEdit(device: Device, rule: AppliedRule) {
-  const sig = ruleSignature(rule);
   editRule.value = rule;
   editDevice.value = device;
   // entity-rename has no signature (its value is unique per device), so it
   // is never shared and the dialog won't offer a scope.
-  editSharedDevices.value = sig === null ? [device] : devicesForSignature(sig);
+  const shared = sharedDevicesFor(rule);
+  editSharedDevices.value = shared.length > 0 ? shared : [device];
   editOpen.value = true;
 }
 
@@ -287,14 +222,14 @@ onMounted(refresh);
     <!-- Configurations: one line per distinct configuration in use. Devices
          on the same line are normalized identically; editing one device's
          values moves it to its own line (and its own colour). -->
-    <div v-if="signatures.list.length > 0" class="configs">
+    <div v-if="configurations.length > 0" class="configs">
       <div class="configs-title">
-        {{ t('customizations.configs_title', { count: signatures.list.length }) }}
+        {{ t('customizations.configs_title', { count: configurations.length }) }}
       </div>
       <div class="configs-list">
-        <div v-for="e in signatures.list" :key="e.sig" class="config-row">
+        <div v-for="e in configurations" :key="e.sig" class="config-row">
           <div class="config-type">
-            <NTag size="small" :bordered="false" :color="signatureStyle(e.index, isDark)">
+            <NTag size="small" :bordered="false" :color="tagStyle(e.rule)">
               {{ e.rule.type }}
             </NTag>
           </div>

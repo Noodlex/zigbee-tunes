@@ -50,6 +50,7 @@
   "card": {
     "badge_title": "Cliquer pour voir/gérer la configuration spécifique",
     "popover_title": "Configuration spécifique à cet appareil",
+    "popover_edit_title": "Modifier {type}",
     "popover_remove_title": "Retirer {type} pour cet appareil",
     "popover_hint": "Le ✕ retire la règle pour CET appareil uniquement.",
     "capability_modified_title": "{capability} est actuellement modifié par une règle Zigbee Tunes"

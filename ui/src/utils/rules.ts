@@ -16,6 +16,17 @@ export function brightnessPercent(scale: number): number {
   return Math.round((scale / 254) * 100);
 }
 
+/**
+ * Rules that target this device EXPLICITLY by its IEEE, as opposed to
+ * matching it through `*`, `@vendor:` and friends. Those are the ones the UI
+ * treats as belonging to the device: a global rule is fleet-wide default
+ * behaviour and isn't flagged on each device it happens to cover.
+ */
+export function specificRulesFor(device: Device): AppliedRule[] {
+  const ieee = device.ieee.toLowerCase();
+  return device.applied_rules.filter((r) => r.targets.some((t) => t.toLowerCase() === ieee));
+}
+
 export interface CctRangeStats {
   /** False when no selected device advertises a native CCT range. */
   hasData: boolean;
