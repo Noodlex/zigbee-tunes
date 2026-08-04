@@ -304,14 +304,6 @@ function tooltipFor(
   --zt-text-hint: #888;
   --zt-text-info: #666;
   --zt-text-placeholder: #555;
-  /* Rule-signature tags (Customizations): the hue is picked in JS, only the
-     theme-dependent saturation/lightness live here. */
-  --zt-sig-bg-s: 45%;
-  --zt-sig-bg-l: 22%;
-  --zt-sig-fg-s: 70%;
-  --zt-sig-fg-l: 78%;
-  --zt-sig-neutral-bg: rgba(255, 255, 255, 0.10);
-  --zt-sig-neutral-fg: #aaa;
 }
 
 .zt-light {
@@ -325,12 +317,6 @@ function tooltipFor(
   --zt-text-hint: #777;
   --zt-text-info: #888;
   --zt-text-placeholder: #aaa;
-  --zt-sig-bg-s: 65%;
-  --zt-sig-bg-l: 91%;
-  --zt-sig-fg-s: 75%;
-  --zt-sig-fg-l: 29%;
-  --zt-sig-neutral-bg: rgba(0, 0, 0, 0.06);
-  --zt-sig-neutral-fg: #666;
 }
 
 .brand {

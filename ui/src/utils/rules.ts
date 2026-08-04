@@ -53,25 +53,24 @@ export interface TagStyle {
 const SIGNATURE_HUES = [172, 38, 265, 330, 205, 140, 12, 295];
 
 /**
- * Colour for the Nth distinct rule signature.
+ * Colour for the Nth distinct rule signature, tuned per theme for contrast.
  *
- * The hue is theme-independent (it encodes *which* configuration this is),
- * while saturation/lightness come from CSS custom properties set by the
- * .zt-dark / .zt-light classes. That way a theme switch is resolved by the
- * cascade — no JS theme state to keep in sync, which would go stale in a
- * component that isn't the one owning the theme preference.
+ * The values must be concrete colours: naive-ui forwards them into an inline
+ * custom property, and a `var()` pointing at a theme variable would be
+ * substituted once and never re-resolve when the theme class changes.
  */
-export function signatureStyle(index: number): TagStyle {
+export function signatureStyle(index: number, dark: boolean): TagStyle {
   const hue = SIGNATURE_HUES[index % SIGNATURE_HUES.length]!;
-  return {
-    color: `hsl(${hue} var(--zt-sig-bg-s) var(--zt-sig-bg-l))`,
-    textColor: `hsl(${hue} var(--zt-sig-fg-s) var(--zt-sig-fg-l))`,
-  };
+  return dark
+    ? { color: `hsl(${hue} 45% 22%)`, textColor: `hsl(${hue} 70% 78%)` }
+    : { color: `hsl(${hue} 65% 91%)`, textColor: `hsl(${hue} 75% 29%)` };
 }
 
 /** Colour for rules that carry no groupable value (entity-rename). */
-export function neutralTagStyle(): TagStyle {
-  return { color: 'var(--zt-sig-neutral-bg)', textColor: 'var(--zt-sig-neutral-fg)' };
+export function neutralTagStyle(dark: boolean): TagStyle {
+  return dark
+    ? { color: 'rgba(255, 255, 255, 0.10)', textColor: '#aaa' }
+    : { color: 'rgba(0, 0, 0, 0.06)', textColor: '#666' };
 }
 
 /**

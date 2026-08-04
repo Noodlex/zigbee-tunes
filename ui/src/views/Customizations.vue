@@ -16,6 +16,7 @@ import {
 } from 'naive-ui';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
+import { useTheme } from '../composables/useTheme';
 import {
   describeRule,
   ruleSignature,
@@ -42,6 +43,7 @@ const search = ref('');
 
 const message = useMessage();
 const { resetRuleForDevice } = useRuleActions();
+const { isDark } = useTheme();
 
 async function refresh() {
   loading.value = true;
@@ -117,9 +119,9 @@ const signatures = computed(() => {
 /** Tag colour for a rule: same values -> same colour, different -> different. */
 function tagStyle(rule: AppliedRule): TagStyle {
   const sig = ruleSignature(rule);
-  if (sig === null) return neutralTagStyle();
+  if (sig === null) return neutralTagStyle(isDark.value);
   const index = signatures.value.index.get(sig);
-  return index === undefined ? neutralTagStyle() : signatureStyle(index);
+  return index === undefined ? neutralTagStyle(isDark.value) : signatureStyle(index, isDark.value);
 }
 
 // --- Inline edit -----------------------------------------------------------
@@ -276,7 +278,7 @@ onMounted(refresh);
     <div v-if="signatures.legend.length > 0" class="legend">
       <span class="legend-title">{{ t('customizations.legend_title') }}</span>
       <span v-for="e in signatures.legend" :key="e.sig" class="legend-item">
-        <NTag size="small" :bordered="false" :color="signatureStyle(e.index)">
+        <NTag size="small" :bordered="false" :color="signatureStyle(e.index, isDark)">
           {{ e.rule.type }}
         </NTag>
         <span class="legend-config">{{ describeRule(e.rule, t) }}</span>
