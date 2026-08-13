@@ -50,6 +50,48 @@ describe('ColorTempRangeTransformer', () => {
     expect(out.max_mireds).toBe(454);
   });
 
+  it('leaves the device alone when the rule cannot overlap its range', () => {
+    // "no cooler than 500 mireds" against a bulb that stops at 454: clamping
+    // each side independently would emit min 500 / max 454 and hand Home
+    // Assistant an empty window.
+    const t = new ColorTempRangeTransformer({
+      type: 'color-temp-range',
+      targets: ['*'],
+      priority: 10,
+      min_mireds: 500,
+    });
+    const payload: DiscoveryPayload = { min_mireds: 250, max_mireds: 454 };
+    const out = t.apply(payload, ctx);
+    expect(out.min_mireds).toBe(250);
+    expect(out.max_mireds).toBe(454);
+  });
+
+  it('leaves the device alone when the rule max sits below its native min', () => {
+    const t = new ColorTempRangeTransformer({
+      type: 'color-temp-range',
+      targets: ['*'],
+      priority: 10,
+      max_mireds: 200,
+    });
+    const payload: DiscoveryPayload = { min_mireds: 250, max_mireds: 454 };
+    const out = t.apply(payload, ctx);
+    expect(out.min_mireds).toBe(250);
+    expect(out.max_mireds).toBe(454);
+  });
+
+  it('still clamps when the rule and the device overlap by a single value', () => {
+    const t = new ColorTempRangeTransformer({
+      type: 'color-temp-range',
+      targets: ['*'],
+      priority: 10,
+      min_mireds: 454,
+    });
+    const payload: DiscoveryPayload = { min_mireds: 250, max_mireds: 454 };
+    const out = t.apply(payload, ctx);
+    expect(out.min_mireds).toBe(454);
+    expect(out.max_mireds).toBe(454);
+  });
+
   it('respects appliesTo by target pattern', () => {
     const t = new ColorTempRangeTransformer({
       type: 'color-temp-range',

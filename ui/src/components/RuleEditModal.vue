@@ -5,9 +5,10 @@
 // what you are about to type, so it shouldn't be an afterthought at save time.
 
 import { computed, ref, watch } from 'vue';
-import { NModal, NRadio, NRadioGroup, NButton, NSpace } from 'naive-ui';
+import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
+import { isRangeOrdered } from '../utils/rules';
 import type { AppliedRule, Device } from '../api/types';
 
 const props = defineProps<{
@@ -75,7 +76,8 @@ const valid = computed(() => {
   if (!rule) return false;
   switch (rule.type) {
     case 'color-temp-range':
-      return min.value !== null || max.value !== null;
+      // An inverted range would hand Home Assistant an empty window.
+      return (min.value !== null || max.value !== null) && isRangeOrdered(min.value, max.value);
     case 'brightness-range':
       return scale.value !== null;
     default:
@@ -83,10 +85,17 @@ const valid = computed(() => {
   }
 });
 
-const targets = computed<string[]>(() => {
-  if (scope.value === 'all') return props.sharedDevices.map((d) => d.ieee);
-  return props.device ? [props.device.ieee] : [];
+/**
+ * Devices the save will hit. Also feeds the editor, so the slider bounds and
+ * the native-range hints follow the chosen scope: one device shows its own
+ * range, the whole group shows the envelope and the safe intersection.
+ */
+const targetDevices = computed<Device[]>(() => {
+  if (scope.value === 'all') return props.sharedDevices;
+  return props.device ? [props.device] : [];
 });
+
+const targets = computed<string[]>(() => targetDevices.value.map((d) => d.ieee));
 
 function buildValues(): Record<string, unknown> {
   const rule = props.rule!;
@@ -137,24 +146,21 @@ function onSave() {
       <div v-if="scopeChoosable" class="scope-block">
         <span class="scope-label">{{ t('customizations.scope_label') }}</span>
         <NRadioGroup v-model:value="scope" size="small">
-          <NSpace vertical :size="4">
-            <NRadio value="device">
-              {{ t('customizations.scope_device_named', { device: device?.friendly_name ?? '' }) }}
-              <span class="scope-hint">— {{ t('customizations.scope_device_hint') }}</span>
-            </NRadio>
-            <NRadio value="all">
-              {{ t('customizations.scope_all', { count: sharedDevices.length }) }}
-              <span class="scope-hint" :title="sharedNames">— {{ sharedNames }}</span>
-            </NRadio>
-          </NSpace>
+          <NRadioButton value="device">{{ device?.friendly_name }}</NRadioButton>
+          <NRadioButton value="all">
+            {{ t('customizations.scope_all', { count: sharedDevices.length }) }}
+          </NRadioButton>
         </NRadioGroup>
+        <!-- One line, about the choice actually made. -->
+        <span class="scope-hint" :title="scope === 'all' ? sharedNames : ''">
+          {{ scope === 'device' ? t('customizations.scope_device_hint') : sharedNames }}
+        </span>
       </div>
 
       <div class="fields-block">
         <RuleEditFields
           :type="rule.type"
-          :native-min-mireds="device?.native_min_mireds"
-          :native-max-mireds="device?.native_max_mireds"
+          :devices="targetDevices"
           v-model:min="min"
           v-model:max="max"
           v-model:scale="scale"
@@ -166,14 +172,21 @@ function onSave() {
     <template #footer>
       <div class="modal-footer">
         <!-- Spells out the blast radius right next to the Save button, and
-             stands out as soon as more than one device is about to change. -->
-        <span class="targets-recap" :class="{ 'targets-recap-many': targets.length > 1 }">
-          <template v-if="targets.length > 1">
-            {{ t('customizations.modal_targets_many', { count: targets.length }) }}
-          </template>
-          <template v-else>
-            {{ t('customizations.modal_targets_one', { device: singleTargetName }) }}
-          </template>
+             stands out as soon as more than one device is about to change.
+             It stays visible while an inverted range is being fixed — that is
+             exactly when knowing the scope matters. -->
+        <span class="footer-status">
+          <span v-if="!isRangeOrdered(min, max)" class="range-error">
+            {{ t('panel.range_inverted') }} ·
+          </span>
+          <span class="targets-recap" :class="{ 'targets-recap-many': targets.length > 1 }">
+            <template v-if="targets.length > 1">
+              {{ t('customizations.modal_targets_many', { count: targets.length }) }}
+            </template>
+            <template v-else>
+              {{ t('customizations.modal_targets_one', { device: singleTargetName }) }}
+            </template>
+          </span>
         </span>
         <NSpace :size="8">
           <NButton size="small" quaternary :disabled="saving" @click="show = false">
@@ -248,5 +261,18 @@ function onSave() {
 .targets-recap-many {
   font-weight: 600;
   color: var(--zt-text-warning, #f0a020);
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.range-error {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zt-text-error, #d03050);
 }
 </style>

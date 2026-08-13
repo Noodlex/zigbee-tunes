@@ -49,7 +49,7 @@ export function useRuleActions() {
     return { refresh: res.refresh, deleted: false };
   }
 
-  /** Removes a single device from a rule (the ✕ button on a rule row). */
+  /** Removes a single device from a rule (the bin button on a rule row). */
   function resetRuleForDevice(
     deviceIeee: string,
     rule: AppliedRule,

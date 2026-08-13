@@ -50,8 +50,9 @@
   "card": {
     "badge_title": "Click to view/manage the specific configuration",
     "popover_title": "Configuration specific to this device",
+    "popover_edit_title": "Edit {type}",
     "popover_remove_title": "Remove {type} for this device",
-    "popover_hint": "The ✕ removes the rule for THIS device only.",
+    "popover_hint": "Removing here only affects THIS device.",
     "capability_modified_title": "{capability} is currently overridden by a Zigbee Tunes rule"
   },
   "panel": {
@@ -64,7 +65,6 @@
     "field_min": "min",
     "field_max": "max",
     "field_max_scale": "max_scale",
-    "field_brightness_max": "{value} max",
     "field_brightness_hint": "(254 = no limit)",
     "area_placeholder": "e.g. Living room",
     "device_name_placeholder": "HA display name",
@@ -72,13 +72,16 @@
     "scale_placeholder": "1-254",
     "conflicts_header": "{count} existing rule(s) will be overwritten",
     "apply_button": "Apply to {count} device(s)",
-    "cct_native_range": "device native: {low} → {high}",
     "cct_safe_intersection": "safe intersection: {min} → {max}",
+    "device_capability": "what this device supports · {min}–{max}",
+    "unit_mireds": "mireds",
+    "range_inverted": "min must not be above max",
+    "cct_no_common_range": "these devices share no common range — a rule can't suit them all",
     "cct_missing_data": "{count} device(s) without native data (Z2M must publish on z2m_discovery)"
   },
   "customizations": {
     "title": "Customizations",
-    "description": "One row per specific configuration rule applied to a device. The ✕ button removes the rule for this device only (the rule is fully deleted if it only targeted this device). The global rule (e.g. {targetsAll}) keeps running in the background.",
+    "description": "One row per specific configuration rule applied to a device. Removing on a device row only affects that device (the rule is fully deleted if it only targeted it); removing on a configuration affects every device using it. The global rule (e.g. {targetsAll}) keeps running in the background.",
     "search_placeholder": "Search name, IEEE, vendor, model, type, configuration...",
     "empty": "No device with a custom configuration",
     "remove_title": "Remove {type} for {device}",
@@ -90,7 +93,6 @@
     "modal_targets_one": "Only {device} will change",
     "modal_targets_many": "{count} devices will change",
     "shared_badge_title": "Shared configuration — {count} devices use it: {devices}",
-    "scope_device_named": "{device} only",
     "legend_edit_title": "Edit this configuration on its {count} device(s)",
     "legend_delete_title": "Remove this configuration from its {count} device(s)",
     "legend_delete_confirm": "Remove this configuration from {count} device(s)?",

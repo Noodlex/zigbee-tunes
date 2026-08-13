@@ -19,8 +19,12 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import DeviceCard from '../components/DeviceCard.vue';
 import SelectionPanel, { type Changes } from '../components/SelectionPanel.vue';
+import RuleEditModal from '../components/RuleEditModal.vue';
 import { api } from '../api/client';
 import { useRuleActions } from '../composables/useRuleActions';
+import { useConfigurations } from '../composables/useConfigurations';
+import { useRuleEditDialog } from '../composables/useRuleEditDialog';
+import { specificRulesFor } from '../utils/rules';
 import type { Device, AppliedRule } from '../api/types';
 
 const { t } = useI18n();
@@ -86,10 +90,12 @@ const capabilityOptions = computed(() => {
 });
 
 function hasSpecificRule(d: Device): boolean {
-  return d.applied_rules.some((r) =>
-    r.targets.some((t) => t.toLowerCase() === d.ieee.toLowerCase()),
-  );
+  return specificRulesFor(d).length > 0;
 }
+
+// Same configuration colours as the Customizations page, and the shared-device
+// lookup the edit dialog needs to offer its scope choice.
+const { tagStyle, sharedDevicesFor } = useConfigurations(devices);
 
 const filtered = computed(() => {
   const txt = filterText.value.trim().toLowerCase();
@@ -238,6 +244,14 @@ async function onApply(changes: Changes) {
  */
 const { resetRuleForDevice } = useRuleActions();
 
+// Opened from a card's rule list, so a value can be corrected without leaving
+// the grid. Same dialog and same save path as Customizations.
+const edit = useRuleEditDialog(refresh);
+
+function openEdit(device: Device, rule: AppliedRule) {
+  edit.openForDevice(device, rule, sharedDevicesFor(rule));
+}
+
 async function resetRule(deviceIeee: string, rule: AppliedRule) {
   try {
     const { refresh: r, deleted } = await resetRuleForDevice(deviceIeee, rule);
@@ -341,11 +355,22 @@ onMounted(refresh);
           :key="d.ieee"
           :device="d"
           :selected="selectedIeees.has(d.ieee)"
+          :tag-style="tagStyle"
           @toggle="(e: MouseEvent | KeyboardEvent) => toggle(d.ieee, e)"
           @reset-rule="(rule: AppliedRule) => resetRule(d.ieee, rule)"
+          @edit-rule="(rule: AppliedRule) => openEdit(d, rule)"
         />
       </div>
     </NSpin>
+
+    <RuleEditModal
+      v-model:show="edit.open.value"
+      :rule="edit.rule.value"
+      :device="edit.device.value"
+      :shared-devices="edit.sharedDevices.value"
+      :saving="edit.saving.value"
+      @save="edit.onSave"
+    />
   </NSpace>
 </template>
 

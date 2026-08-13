@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { NCard, NTag, NSpace, NIcon, NButton, NPopover, NEllipsis } from 'naive-ui';
+import { IconPencil, IconTrash } from './icons';
 import { useI18n } from 'vue-i18n';
 import type { Device, AppliedRule } from '../api/types';
-import { describeRule } from '../utils/rules';
+import { describeRule, specificRulesFor, type TagStyle } from '../utils/rules';
 import { isZ2mGroup } from '../utils/devices';
 
 const { t } = useI18n();
@@ -11,11 +12,16 @@ const { t } = useI18n();
 const props = defineProps<{
   device: Device;
   selected: boolean;
+  /** Colour for a rule tag, so a configuration looks the same here as it does
+      on the Customizations page. Supplied by the parent, which knows the
+      whole fleet — a single card can't tell what else uses this rule. */
+  tagStyle: (rule: AppliedRule) => TagStyle;
 }>();
 
 const emit = defineEmits<{
   (e: 'toggle', event: MouseEvent | KeyboardEvent): void;
   (e: 'reset-rule', rule: AppliedRule): void;
+  (e: 'edit-rule', rule: AppliedRule): void;
 }>();
 
 const imageLoaded = ref(true);
@@ -41,17 +47,11 @@ const fallbackEmoji = computed(() => {
 });
 
 /**
- * A rule is considered "specific" to this device if at least one of its
- * targets matches its IEEE EXPLICITLY (not via *, @vendor, etc.).
- * The orange badge is only shown for specific rules — global rules are
- * "default behavior" for the fleet and don't deserve flagging each
- * device individually.
+ * The orange badge is only shown for rules targeting this device explicitly —
+ * global rules are fleet-wide default behaviour and don't deserve flagging on
+ * each device they happen to cover.
  */
-const specificRules = computed(() =>
-  props.device.applied_rules.filter((r) =>
-    r.targets.some((t) => t.toLowerCase() === props.device.ieee.toLowerCase()),
-  ),
-);
+const specificRules = computed(() => specificRulesFor(props.device));
 const hasSpecificRule = computed(() => specificRules.value.length > 0);
 
 /**
@@ -147,17 +147,31 @@ function onActivate(e: KeyboardEvent) {
             <div class="popover-content" @click.stop>
               <div class="popover-title">{{ t('card.popover_title') }}</div>
               <div v-for="r in specificRules" :key="r.id" class="popover-rule">
-                <NTag size="small" type="info">{{ r.type }}</NTag>
+                <NTag size="small" :bordered="false" :color="tagStyle(r)">{{ r.type }}</NTag>
                 <span class="popover-rule-config">{{ describeRule(r, t) }}</span>
-                <NButton
-                  size="tiny"
-                  type="error"
-                  ghost
-                  :title="t('card.popover_remove_title', { type: r.type })"
-                  @click.stop="emit('reset-rule', r)"
-                >
-                  ✕
-                </NButton>
+                <div class="popover-rule-actions">
+                  <NButton
+                    size="small"
+                    quaternary
+                    circle
+                    :aria-label="t('card.popover_edit_title', { type: r.type })"
+                    :title="t('card.popover_edit_title', { type: r.type })"
+                    @click.stop="emit('edit-rule', r)"
+                  >
+                    <template #icon><NIcon><component :is="IconPencil" /></NIcon></template>
+                  </NButton>
+                  <NButton
+                    size="small"
+                    quaternary
+                    circle
+                    type="error"
+                    :aria-label="t('card.popover_remove_title', { type: r.type })"
+                    :title="t('card.popover_remove_title', { type: r.type })"
+                    @click.stop="emit('reset-rule', r)"
+                  >
+                    <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                  </NButton>
+                </div>
               </div>
               <div class="popover-hint">{{ t('card.popover_hint') }}</div>
             </div>
@@ -368,6 +382,12 @@ function onActivate(e: KeyboardEvent) {
 .popover-rule:last-of-type {
   border-bottom: none;
 }
+.popover-rule-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
 .popover-rule-config {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 11px;

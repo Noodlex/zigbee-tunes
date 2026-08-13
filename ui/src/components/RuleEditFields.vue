@@ -1,93 +1,384 @@
 <script setup lang="ts">
 // Input fields for one transformer's config, shared by the two places that
-// edit a rule in Customizations: a single device's row, and a legend entry
-// (which edits every device using that configuration at once).
+// edit a rule in Customizations: a single device's row, and a configuration
+// line (which edits every device using it at once).
 
-import { NInput, NInputNumber } from 'naive-ui';
+import { computed, ref, watch } from 'vue';
+import { NInput, NInputNumber, NSlider, NRadioGroup, NRadioButton } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
-import { miredsToKelvin, brightnessPercent } from '../utils/rules';
-import type { TransformerType } from '../api/types';
+import {
+  miredsToKelvin,
+  brightnessPercent,
+  cctRangeStats,
+  BRIGHTNESS_SCALE_MIN as BRIGHTNESS_MIN,
+  BRIGHTNESS_SCALE_MAX as BRIGHTNESS_MAX,
+} from '../utils/rules';
+import type { Device, TransformerType } from '../api/types';
 
-defineProps<{
+const props = defineProps<{
   type: TransformerType;
-  /** Device-native CCT bounds, shown as a hint. Omitted for a bulk edit,
-      where the selected devices don't share a single native range. */
-  nativeMinMireds?: number | null;
-  nativeMaxMireds?: number | null;
+  /** Devices the edit will actually be applied to. Drives the slider bounds
+      and the native-range hints, so they follow the chosen scope. */
+  devices: Device[];
 }>();
 
-const min = defineModel<number | null>('min', { required: true });
-const max = defineModel<number | null>('max', { required: true });
-const scale = defineModel<number | null>('scale', { required: true });
-const text = defineModel<string>('text', { required: true });
+// Optional: a caller only binds the models its transformer type uses (the
+// creation panel drives one row per type, the edit dialog one type at a time).
+const min = defineModel<number | null>('min', { default: null });
+const max = defineModel<number | null>('max', { default: null });
+const scale = defineModel<number | null>('scale', { default: null });
+const text = defineModel<string>('text', { default: '' });
 
 const { t } = useI18n();
+
+/** Widest range the parser accepts, used when no native data is known. */
+const FALLBACK_MIN = 100;
+const FALLBACK_MAX = 700;
+
+const cct = computed(() => cctRangeStats(props.devices));
+
+// Values the editor opened with. The dialog unmounts its body when it closes
+// (NModal's displayDirective defaults to 'if'), so this is captured afresh on
+// every open. The bounds widen to fit these but NOT to fit the live values:
+// deriving the axis from what the user is currently typing would rescale it
+// under them — and would make the percentages below mean something different
+// with every keystroke.
+const openedWithMin = min.value;
+const openedWithMax = max.value;
+
+/**
+ * Slider bounds: the envelope of what the targeted devices can do, widened if
+ * needed to cover the values the rule already had. Clamping to the
+ * intersection would silently rewrite a rule that sits outside it — the
+ * intersection is shown as marks instead, so the safe zone stays visible
+ * without trapping the handles.
+ *
+ * Still reactive to `devices`, so switching scope in the dialog rescales.
+ */
+const bounds = computed<[number, number]>(() => {
+  const low = cct.value.unionLow ?? FALLBACK_MIN;
+  const high = cct.value.unionHigh ?? FALLBACK_MAX;
+  const candidates = [low, high, openedWithMin, openedWithMax].filter(
+    (v): v is number => v !== null && v !== undefined,
+  );
+  return [Math.min(...candidates), Math.max(...candidates)] as [number, number];
+});
+
+/**
+ * The span every targeted device can honour, drawn as a band over the track.
+ * Showing it is only worth it when it doesn't cover the whole axis — which
+ * happens when devices disagree, or when the rule reaches past what they can
+ * do. Null hides the band and its caption.
+ */
+const safeBandStyle = computed<Record<string, string> | null>(() => {
+  const { hasData, hasSafeZone, safeMin, safeMax } = cct.value;
+  // No overlap between the devices: there is no value that suits them all, so
+  // don't draw a band that would imply one exists.
+  if (!hasData || !hasSafeZone || safeMin === null || safeMax === null) return null;
+  const [low, high] = bounds.value;
+  if (high === low) return null;
+  if (safeMin <= low && safeMax >= high) return null; // covers everything
+  return {
+    left: `${Math.max(0, ((safeMin - low) / (high - low)) * 100)}%`,
+    right: `${Math.max(0, ((high - safeMax) / (high - low)) * 100)}%`,
+  };
+});
+
+/**
+ * A cleared bound falls back to the matching end of the slider, so dragging
+ * always yields a usable range. Only the handle that actually moved is
+ * written back: assigning both would give a min-only rule a max it never had,
+ * changing which configuration it belongs to.
+ */
+const rangeValue = computed<[number, number]>({
+  get: (): [number, number] => [min.value ?? bounds.value[0], max.value ?? bounds.value[1]],
+  set: ([low, high]: [number, number]) => {
+    const [currentLow, currentHigh] = rangeValue.value;
+    // naive-ui lets a handle be dragged past the other and emits the crossed
+    // array as-is. Stopping the handle dead would stack the two on the same
+    // value, and naive-ui then resolves every later rail click to handle 0,
+    // leaving the slider unusable. Swapping the roles instead keeps the drag
+    // meaningful and the range non-empty.
+    if (low !== currentLow) {
+      if (low > currentHigh) {
+        min.value = currentHigh;
+        max.value = low;
+      } else {
+        min.value = low;
+      }
+    }
+    if (high !== currentHigh) {
+      if (high < currentLow) {
+        max.value = currentLow;
+        min.value = high;
+      } else {
+        max.value = high;
+      }
+    }
+  },
+});
+
+/**
+ * Keep the values inside the axis when the axis itself moves — switching the
+ * dialog's scope to a narrower device, or deselecting the widest one in the
+ * creation panel. Without this the number field would show a value the slider
+ * pins elsewhere, and a percentage could read past 100%.
+ *
+ * It never fires on open: the bounds are widened by the values the editor
+ * opened with, so a stored rule reaching beyond what its devices support is
+ * left untouched.
+ */
+watch(bounds, ([low, high]) => {
+  const clamp = (v: number) => Math.min(high, Math.max(low, v));
+  const nextMin = min.value === null ? null : clamp(min.value);
+  const nextMax = max.value === null ? null : clamp(max.value);
+  // Never flatten a range the user actually set: if the narrower axis can't
+  // hold both bounds apart, keep them as they are. The transformer refuses to
+  // apply a rule a device can't honour, so an out-of-axis value is harmless.
+  if (nextMin !== null && nextMax !== null && nextMin === nextMax && min.value !== max.value) {
+    return;
+  }
+  min.value = nextMin;
+  max.value = nextMax;
+});
+
+/**
+ * Where a value sits on the slider, as a percentage of the span currently
+ * shown: 0% is the low bound, 100% the high one. Reads as "how far into what
+ * these devices can do", which is easier to judge than a raw mired count.
+ */
+function percentOfBounds(value: number): number | null {
+  const [low, high] = bounds.value;
+  if (high === low) return null; // degenerate span, a percentage means nothing
+  return Math.round(((value - low) / (high - low)) * 100);
+}
+
+/** Inverse of percentOfBounds: mireds are what actually gets stored. */
+function percentToMireds(percent: number): number {
+  const [low, high] = bounds.value;
+  const clamped = Math.min(100, Math.max(0, percent));
+  return Math.round(low + (clamped / 100) * (high - low));
+}
+
+/**
+ * The percentages are editable and resolve to mireds straight away, so the
+ * rule keeps storing absolute values — the percentage is a way to enter them,
+ * not a second unit to persist.
+ */
+const minPercent = computed<number | null>({
+  get: () => (min.value === null ? null : percentOfBounds(min.value)),
+  set: (percent) => {
+    min.value = percent === null ? null : percentToMireds(percent);
+  },
+});
+
+const maxPercent = computed<number | null>({
+  get: () => (max.value === null ? null : percentOfBounds(max.value)),
+  set: (percent) => {
+    max.value = percent === null ? null : percentToMireds(percent);
+  },
+});
+
+/**
+ * Which unit the fields accept. One field per bound instead of one per unit:
+ * with both on screen it was never obvious which one to fill in. Applies to
+ * every range type — a brightness cap is just as naturally expressed as
+ * "80%" as it is as "203".
+ */
+type Unit = 'absolute' | 'percent';
+const unit = ref<Unit>('absolute');
+const isPercent = computed(() => unit.value === 'percent');
+
+/** Only the numeric transformers offer a slider and a unit switch. */
+const isRangeType = computed(
+  () => props.type === 'color-temp-range' || props.type === 'brightness-range',
+);
+
+/** Label of the raw unit, which differs per transformer. */
+const absoluteUnitLabel = computed(() =>
+  props.type === 'brightness-range'
+    ? `${BRIGHTNESS_MIN}–${BRIGHTNESS_MAX}`
+    : t('panel.unit_mireds'),
+);
+
+const minField = computed<number | null>({
+  get: () => (isPercent.value ? minPercent.value : min.value),
+  set: (v) => {
+    if (isPercent.value) minPercent.value = v;
+    else min.value = v;
+  },
+});
+
+const maxField = computed<number | null>({
+  get: () => (isPercent.value ? maxPercent.value : max.value),
+  set: (v) => {
+    if (isPercent.value) maxPercent.value = v;
+    else max.value = v;
+  },
+});
+
+/**
+ * Brightness percentages are relative to the native maximum, matching what
+ * the scale means: 254 is "no limit", so 254 is 100%.
+ */
+const scalePercent = computed<number | null>({
+  get: () => (scale.value === null ? null : brightnessPercent(scale.value)),
+  set: (percent) => {
+    if (percent === null) {
+      scale.value = null;
+      return;
+    }
+    const raw = Math.round((Math.min(100, Math.max(0, percent)) / 100) * BRIGHTNESS_MAX);
+    scale.value = Math.min(BRIGHTNESS_MAX, Math.max(BRIGHTNESS_MIN, raw));
+  },
+});
+
+const scaleField = computed<number | null>({
+  get: () => (isPercent.value ? scalePercent.value : scale.value),
+  set: (v) => {
+    if (isPercent.value) scalePercent.value = v;
+    else scale.value = v;
+  },
+});
+
+// In its raw unit the field accepts exactly what the slider shows, so typing
+// can't produce a value the slider is unable to represent.
+const fieldMin = computed(() => {
+  if (isPercent.value) return 0;
+  return props.type === 'brightness-range' ? BRIGHTNESS_MIN : bounds.value[0];
+});
+const fieldMax = computed(() => {
+  if (isPercent.value) return 100;
+  return props.type === 'brightness-range' ? BRIGHTNESS_MAX : bounds.value[1];
+});
 
 function kelvinLabel(mireds: number | null): string {
   if (mireds === null || mireds === 0) return '';
   return `${miredsToKelvin(mireds)}K`;
 }
 
+/** Shows the unit the field is NOT currently using, so both stay in view. */
 function scaleLabel(value: number | null): string {
   if (value === null || value === 0) return '';
-  return `${brightnessPercent(value)}%`;
+  return isPercent.value ? String(value) : `${brightnessPercent(value)}%`;
+}
+
+/** Mireds are the inverse of kelvin, so the tooltip shows both, plus the
+    position on the slider as a percentage. */
+function formatMireds(value: number): string {
+  const pct = percentOfBounds(value);
+  const base = `${value} · ${miredsToKelvin(value)}K`;
+  return pct === null ? base : `${base} · ${pct}%`;
+}
+
+function formatScale(value: number): string {
+  return `${value} · ${brightnessPercent(value)}%`;
 }
 </script>
 
 <template>
   <div class="edit-fields">
     <template v-if="type === 'color-temp-range'">
-      <span class="field-label">{{ t('panel.field_min') }}</span>
-      <NInputNumber
-        v-model:value="min"
-        :min="100"
-        :max="700"
-        :placeholder="t('panel.mireds_placeholder')"
-        size="small"
-        clearable
-        :show-button="false"
-        style="width: 88px"
-      />
-      <span class="field-hint">{{ kelvinLabel(min) }}</span>
+      <!-- Mireds ascend left to right, which runs cool -> warm: the rail
+           gradient follows that direction so it doesn't lie about the axis. -->
+      <!-- The axis carries its own scale: its ends are the bounds, which are
+           also the 0% and 100% anchors. No need to restate them in text. -->
+      <div class="slider-row cct-slider">
+        <span class="axis-end">{{ bounds[0] }}</span>
+        <div class="slider-holder">
+          <div v-if="safeBandStyle" class="safe-band" :style="safeBandStyle" />
+          <NSlider
+            v-model:value="rangeValue"
+            range
+            :min="bounds[0]"
+            :max="bounds[1]"
+            :format-tooltip="formatMireds"
+            :step="1"
+          />
+        </div>
+        <span class="axis-end">{{ bounds[1] }}</span>
+      </div>
 
-      <span class="field-sep">·</span>
+      <div v-if="safeBandStyle" class="band-key">
+        <span class="band-swatch" aria-hidden="true" />
+        <span v-if="devices.length > 1">
+          {{ t('panel.cct_safe_intersection', { min: cct.safeMin, max: cct.safeMax }) }}
+        </span>
+        <span v-else>
+          {{ t('panel.device_capability', { min: cct.safeMin, max: cct.safeMax }) }}
+        </span>
+      </div>
 
-      <span class="field-label">{{ t('panel.field_max') }}</span>
-      <NInputNumber
-        v-model:value="max"
-        :min="100"
-        :max="700"
-        :placeholder="t('panel.mireds_placeholder')"
-        size="small"
-        clearable
-        :show-button="false"
-        style="width: 88px"
-      />
-      <span class="field-hint">{{ kelvinLabel(max) }}</span>
+      <!-- No value can suit everyone: say so, otherwise the missing band just
+           looks like there is nothing to report. -->
+      <div v-if="cct.hasData && !cct.hasSafeZone" class="slider-warning">
+        {{ t('panel.cct_no_common_range') }}
+      </div>
 
-      <span
-        v-if="nativeMinMireds !== null && nativeMinMireds !== undefined
-          && nativeMaxMireds !== null && nativeMaxMireds !== undefined"
-        class="field-native"
-      >
-        {{ t('panel.cct_native_range', { low: nativeMinMireds, high: nativeMaxMireds }) }}
-      </span>
+      <div v-if="cct.missing > 0" class="slider-warning">
+        {{ t('panel.cct_missing_data', { count: cct.missing }) }}
+      </div>
+
+      <!-- One field per bound. The unit switch decides what it accepts; a
+           percentage resolves to mireds straight away, which is what gets
+           stored — the kelvin readout stays true either way. -->
+      <div class="numeric-grid">
+        <span class="field-label">{{ t('panel.field_min') }}</span>
+        <NInputNumber
+          v-model:value="minField"
+          :min="fieldMin"
+          :max="fieldMax"
+          :placeholder="isPercent ? '%' : t('panel.mireds_placeholder')"
+          size="small"
+          clearable
+          :show-button="false"
+        />
+        <span class="field-hint">{{ kelvinLabel(min) }}</span>
+
+        <span class="field-label">{{ t('panel.field_max') }}</span>
+        <NInputNumber
+          v-model:value="maxField"
+          :min="fieldMin"
+          :max="fieldMax"
+          :placeholder="isPercent ? '%' : t('panel.mireds_placeholder')"
+          size="small"
+          clearable
+          :show-button="false"
+        />
+        <span class="field-hint">{{ kelvinLabel(max) }}</span>
+
+      </div>
     </template>
 
     <template v-else-if="type === 'brightness-range'">
-      <span class="field-label">{{ t('panel.field_max_scale') }}</span>
-      <NInputNumber
-        v-model:value="scale"
-        :min="1"
-        :max="254"
-        :placeholder="t('panel.scale_placeholder')"
-        size="small"
-        clearable
-        :show-button="false"
-        style="width: 88px"
-      />
-      <span class="field-hint">{{ scaleLabel(scale) }}</span>
-      <span class="field-native">{{ t('panel.field_brightness_hint') }}</span>
+      <div class="slider-block">
+        <NSlider
+          :value="scale ?? BRIGHTNESS_MAX"
+          :min="BRIGHTNESS_MIN"
+          :max="BRIGHTNESS_MAX"
+          :format-tooltip="formatScale"
+          :step="1"
+          @update:value="(v: number) => (scale = v)"
+        />
+      </div>
+
+      <div class="numeric-grid">
+        <span class="field-label">{{ t('panel.field_max_scale') }}</span>
+        <NInputNumber
+          v-model:value="scaleField"
+          :min="fieldMin"
+          :max="fieldMax"
+          :placeholder="isPercent ? '%' : t('panel.scale_placeholder')"
+          size="small"
+          clearable
+          :show-button="false"
+        />
+        <span class="field-hint">
+          {{ scaleLabel(scale) }}
+          <span class="field-native">{{ t('panel.field_brightness_hint') }}</span>
+        </span>
+
+      </div>
     </template>
 
     <NInput
@@ -100,15 +391,105 @@ function scaleLabel(value: number | null): string {
       clearable
       style="max-width: 280px"
     />
+
+    <!-- Rendered once for both range types: the switch means the same thing
+         in each, only the raw unit's name differs. -->
+    <div v-if="isRangeType" class="unit-row">
+      <NRadioGroup v-model:value="unit" size="small">
+        <NRadioButton value="absolute">{{ absoluteUnitLabel }}</NRadioButton>
+        <NRadioButton value="percent">%</NRadioButton>
+      </NRadioGroup>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .edit-fields {
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The bounds sit at the ends of the axis instead of being restated below. */
+.slider-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.axis-end {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+  color: var(--zt-text-hint, #888);
+  flex-shrink: 0;
+}
+
+.slider-holder {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* The span every targeted device can honour. Translucent and click-through,
+   so it reads over the rail without swallowing drags or hiding a handle. */
+.safe-band {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(24, 160, 88, 0.18);
+  border-left: 1px solid rgba(24, 160, 88, 0.8);
+  border-right: 1px solid rgba(24, 160, 88, 0.8);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.band-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--zt-text-hint, #888);
+}
+
+.band-swatch {
+  width: 16px;
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(24, 160, 88, 0.18);
+  border-left: 1px solid rgba(24, 160, 88, 0.8);
+  border-right: 1px solid rgba(24, 160, 88, 0.8);
+  flex-shrink: 0;
+}
+
+.slider-warning {
+  font-size: 10px;
+  color: var(--zt-text-warning, #f0a020);
+}
+
+/* Cool (low mireds) on the left, warm (high mireds) on the right. The
+   selected span keeps naive-ui's fill on top, so the gradient shows what is
+   being cut away rather than what is kept. */
+.cct-slider :deep(.n-slider-rail) {
+  background-image: linear-gradient(to right, #9bd0ea, #f3f0ea, #ffc98a);
+}
+
+/* label | value | kelvin — one row per bound. The unit switch sits below in
+   its own row, shared by both range types. */
+.numeric-grid {
+  display: grid;
+  grid-template-columns: auto 110px 1fr;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.unit-row {
+  display: flex;
+}
+
+.slider-block {
+  padding-bottom: 2px;
 }
 
 .field-label {
@@ -120,10 +501,6 @@ function scaleLabel(value: number | null): string {
   font-size: 11px;
   color: var(--zt-text-hint, #888);
   min-width: 44px;
-}
-
-.field-sep {
-  color: var(--zt-text-info, #666);
 }
 
 .field-native {

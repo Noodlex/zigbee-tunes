@@ -50,8 +50,9 @@
   "card": {
     "badge_title": "Cliquer pour voir/gérer la configuration spécifique",
     "popover_title": "Configuration spécifique à cet appareil",
+    "popover_edit_title": "Modifier {type}",
     "popover_remove_title": "Retirer {type} pour cet appareil",
-    "popover_hint": "Le ✕ retire la règle pour CET appareil uniquement.",
+    "popover_hint": "Retirer ici n'affecte que CET appareil.",
     "capability_modified_title": "{capability} est actuellement modifié par une règle Zigbee Tunes"
   },
   "panel": {
@@ -64,7 +65,6 @@
     "field_min": "min",
     "field_max": "max",
     "field_max_scale": "max_scale",
-    "field_brightness_max": "{value} max",
     "field_brightness_hint": "(254 = pas de limite)",
     "area_placeholder": "ex : Salon",
     "device_name_placeholder": "Nom affiché HA",
@@ -72,13 +72,16 @@
     "scale_placeholder": "1-254",
     "conflicts_header": "{count} règle(s) existante(s) à écraser",
     "apply_button": "Appliquer à {count} appareil(s)",
-    "cct_native_range": "natif des appareils : {low} → {high}",
     "cct_safe_intersection": "intersection sûre : {min} → {max}",
+    "device_capability": "capacité de l'appareil · {min}–{max}",
+    "unit_mireds": "mireds",
+    "range_inverted": "le min ne doit pas dépasser le max",
+    "cct_no_common_range": "ces appareils n'ont aucune plage commune — aucune règle ne peut convenir à tous",
     "cct_missing_data": "{count} appareil(s) sans donnée native (Z2M doit publier sur z2m_discovery)"
   },
   "customizations": {
     "title": "Personnalisations",
-    "description": "Une ligne par règle de configuration spécifique appliquée à un appareil. Le bouton ✕ retire la règle pour cet appareil uniquement (la règle est entièrement supprimée si elle ne ciblait que cet appareil). La règle globale (ex. {targetsAll}) reste active en arrière-plan.",
+    "description": "Une ligne par règle de configuration spécifique appliquée à un appareil. Retirer sur la ligne d'un appareil n'affecte que celui-ci (la règle est entièrement supprimée si elle ne ciblait que lui) ; retirer sur une configuration l'enlève de tous les appareils qui l'utilisent. La règle globale (ex. {targetsAll}) reste active en arrière-plan.",
     "search_placeholder": "Rechercher nom, IEEE, fabricant, modèle, type, configuration...",
     "empty": "Aucun appareil avec configuration personnalisée",
     "remove_title": "Retirer {type} pour {device}",
@@ -90,7 +93,6 @@
     "modal_targets_one": "Seul {device} sera modifié",
     "modal_targets_many": "{count} appareils seront modifiés",
     "shared_badge_title": "Configuration partagée — {count} appareils l'utilisent : {devices}",
-    "scope_device_named": "{device} seulement",
     "legend_edit_title": "Modifier cette configuration sur ses {count} appareil(s)",
     "legend_delete_title": "Retirer cette configuration de ses {count} appareil(s)",
     "legend_delete_confirm": "Retirer cette configuration de {count} appareil(s) ?",

@@ -1,7 +1,7 @@
 // Shared formatting helpers for transformer rules.
 // Avoids duplicating describeRule / kelvin conversion across views.
 
-import type { AppliedRule } from '../api/types';
+import type { AppliedRule, Device } from '../api/types';
 
 /** Minimal `t` shape required by describeRule, so we don't need to import vue-i18n here. */
 export type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
@@ -11,9 +11,102 @@ export function miredsToKelvin(mireds: number): number {
   return Math.round(1_000_000 / mireds);
 }
 
+/** Zigbee brightness scale bounds. 254 is the native maximum, i.e. "no limit". */
+export const BRIGHTNESS_SCALE_MIN = 1;
+export const BRIGHTNESS_SCALE_MAX = 254;
+
 /** Convert a brightness scale (1..254) to a 0..100 percentage. */
 export function brightnessPercent(scale: number): number {
-  return Math.round((scale / 254) * 100);
+  return Math.round((scale / BRIGHTNESS_SCALE_MAX) * 100);
+}
+
+/**
+ * A colour-temperature rule must not invert its bounds: min above max leaves
+ * Home Assistant with an empty window, so the editors refuse to save it.
+ * Either bound alone is fine — a rule can clamp one side only.
+ */
+export function isRangeOrdered(min: number | null, max: number | null): boolean {
+  if (min === null || max === null) return true;
+  return min <= max;
+}
+
+/**
+ * Rules that target this device EXPLICITLY by its IEEE, as opposed to
+ * matching it through `*`, `@vendor:` and friends. Those are the ones the UI
+ * treats as belonging to the device: a global rule is fleet-wide default
+ * behaviour and isn't flagged on each device it happens to cover.
+ */
+export function specificRulesFor(device: Device): AppliedRule[] {
+  const ieee = device.ieee.toLowerCase();
+  return device.applied_rules.filter((r) => r.targets.some((t) => t.toLowerCase() === ieee));
+}
+
+export interface CctRangeStats {
+  /** False when no selected device advertises a native CCT range. */
+  hasData: boolean;
+  /**
+   * False when the devices have no overlap at all (a cool-only bulb next to a
+   * warm-only one): `safeMin` then sits ABOVE `safeMax` and no value can
+   * satisfy everyone, so callers must not present it as a usable range.
+   */
+  hasSafeZone: boolean;
+  /** Devices with color_temp that haven't published their range yet. */
+  missing: number;
+  /** Widest span any device can reach: [min of mins, max of maxs]. */
+  unionLow: number | null;
+  unionHigh: number | null;
+  /** Lowest min EVERY device can honour (the strictest of all mins). */
+  safeMin: number | null;
+  /** Highest max EVERY device can honour (the strictest of all maxs). */
+  safeMax: number | null;
+}
+
+/**
+ * Native colour-temperature range statistics across a set of devices.
+ *
+ * [safeMin, safeMax] is the intersection: pick anything inside and no device
+ * is asked for more than it physically supports. [unionLow, unionHigh] is the
+ * envelope, useful to bound a slider without clipping a value that is already
+ * outside the intersection.
+ *
+ * Shared by the bulk-edit panel and the rule editor so both describe a
+ * selection the same way.
+ */
+export function cctRangeStats(devices: Device[]): CctRangeStats {
+  const mins: number[] = [];
+  const maxs: number[] = [];
+  let missing = 0;
+  for (const d of devices) {
+    if (!d.capabilities.includes('color_temp')) continue;
+    if (d.native_min_mireds === null || d.native_max_mireds === null) {
+      missing += 1;
+      continue;
+    }
+    mins.push(d.native_min_mireds);
+    maxs.push(d.native_max_mireds);
+  }
+  if (mins.length === 0) {
+    return {
+      hasData: false,
+      hasSafeZone: false,
+      missing,
+      unionLow: null,
+      unionHigh: null,
+      safeMin: null,
+      safeMax: null,
+    };
+  }
+  const safeMin = Math.max(...mins);
+  const safeMax = Math.min(...maxs);
+  return {
+    hasData: true,
+    hasSafeZone: safeMin <= safeMax,
+    missing,
+    unionLow: Math.min(...mins),
+    unionHigh: Math.max(...maxs),
+    safeMin,
+    safeMax,
+  };
 }
 
 /**
