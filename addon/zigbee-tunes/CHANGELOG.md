@@ -4,6 +4,40 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.2.0 — Set a range on a slider, in mireds or in percent
+
+### Added
+- Ranges are set with a **slider** bounded by what the targeted devices can
+  actually do: dragging shows how much of their capability is being cut
+  instead of typing mireds blind. The axis carries its own scale — its ends
+  are its bounds — and the span every targeted device can honour is drawn as
+  a band on the track. The bounds follow the chosen scope: one device shows
+  its own range, a whole group shows the envelope of all of them.
+- Each bound can be entered **in mireds or as a percentage** of that range
+  (0% = the low end of the axis, 100% = the high end), whichever is easier to
+  reason about. Brightness gets the same switch, its percentage relative to
+  254 — the native maximum. Percentages resolve to the stored unit
+  immediately, so rules keep holding absolute values and a configuration is
+  still shared by the devices that use it.
+- A device card's rule list can now **edit** as well as remove, opening the
+  same dialog with the same scope question — correcting a value no longer
+  means switching pages.
+- **Creating** a rule from the Devices page uses that same editor, so
+  creating and changing a rule look and behave alike.
+
+### Fixed
+- A rule that cannot overlap a device's advertised range no longer produces
+  an inverted window. Asking for "no cooler than 500 mireds" from a bulb that
+  stops at 454 published `min_mireds 500 / max_mireds 454`, which Home
+  Assistant shows as a broken colour-temperature slider. Such a device is now
+  left with the range it actually advertises. **This affected 1.0.0 and
+  1.1.0.**
+- The editors refuse to save a range whose min is above its max, and dragging
+  a slider handle past the other swaps them instead of producing an empty
+  range.
+- Devices that share no common colour-temperature range at all are called out
+  explicitly, instead of showing a safe zone that doesn't exist.
+
 ## 1.1.0 — Edit rules without leaving Customizations
 
 ### Added
@@ -24,18 +58,6 @@ follows [Semantic Versioning](https://semver.org/).
   configuration — or every device using it. The question only appears when
   the configuration is actually shared, and the default never touches other
   devices.
-- Ranges are set with a **slider** bounded by what the targeted devices can
-  actually do: dragging shows how much of their capability is being cut
-  instead of typing mireds blind. The bounds follow the chosen scope — one
-  device shows its own range, a whole group shows the envelope with the safe
-  intersection marked.
-- Each bound can be entered **in mireds or as a percentage** of that range
-  (0% = the low end of the axis, 100% = the high end), whichever is easier to
-  reason about. Percentages resolve to mireds immediately, so rules keep
-  storing absolute values and a configuration is still shared by the devices
-  that use it.
-- **Creating** a rule from the Devices page uses the same editor as changing
-  one afterwards, so both look and behave alike.
 
 Saving an edit reuses the existing smart-apply path: one atomic refresh.
 
