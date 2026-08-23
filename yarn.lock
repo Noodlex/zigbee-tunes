@@ -477,7 +477,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fastify/static@npm:^9":
+"@fastify/static@npm:^9.3.0":
   version: 9.3.0
   resolution: "@fastify/static@npm:9.3.0"
   dependencies:
@@ -739,7 +739,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24":
+"@types/node@npm:^24.13.3":
   version: 24.13.3
   resolution: "@types/node@npm:24.13.3"
   dependencies:
@@ -1467,7 +1467,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify@npm:^5":
+"fastify@npm:^5.12.1":
   version: 5.12.1
   resolution: "fastify@npm:5.12.1"
   dependencies:
@@ -1788,7 +1788,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mqtt@npm:^5":
+"mqtt@npm:^5.15.2":
   version: 5.15.2
   resolution: "mqtt@npm:5.15.2"
   dependencies:
@@ -2456,7 +2456,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsx@npm:^4":
+"tsx@npm:^4.23.12":
   version: 4.23.12
   resolution: "tsx@npm:4.23.12"
   dependencies:
@@ -2596,7 +2596,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^3":
+"vitest@npm:^3.2.7":
   version: 3.2.7
   resolution: "vitest@npm:3.2.7"
   dependencies:
@@ -2788,13 +2788,13 @@ __metadata:
   resolution: "zigbee-tunes@workspace:."
   dependencies:
     "@fastify/cors": "npm:^10.0.1"
-    "@fastify/static": "npm:^9"
-    "@types/node": "npm:^24"
-    fastify: "npm:^5"
-    mqtt: "npm:^5"
-    tsx: "npm:^4"
+    "@fastify/static": "npm:^9.3.0"
+    "@types/node": "npm:^24.13.3"
+    fastify: "npm:^5.12.1"
+    mqtt: "npm:^5.15.2"
+    tsx: "npm:^4.23.12"
     typescript: "npm:^5.6.3"
-    vitest: "npm:^3"
+    vitest: "npm:^3.2.7"
     winston: "npm:^3.17.0"
     yaml: "npm:^2.6.1"
   languageName: unknown

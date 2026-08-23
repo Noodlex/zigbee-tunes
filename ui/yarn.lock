@@ -541,7 +541,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24":
+"@types/node@npm:^24.13.3":
   version: 24.13.3
   resolution: "@types/node@npm:24.13.3"
   dependencies:
@@ -1085,7 +1085,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"naive-ui@npm:^2":
+"naive-ui@npm:^2.45.2":
   version: 2.45.2
   resolution: "naive-ui@npm:2.45.2"
   dependencies:
@@ -1473,7 +1473,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vue-i18n@npm:^11":
+"vue-i18n@npm:^11.4.8":
   version: 11.4.8
   resolution: "vue-i18n@npm:11.4.8"
   dependencies:
@@ -1512,7 +1512,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vue@npm:^3":
+"vue@npm:^3.5.41":
   version: 3.5.41
   resolution: "vue@npm:3.5.41"
   dependencies:
@@ -1569,13 +1569,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "zigbee-tunes-ui@workspace:."
   dependencies:
-    "@types/node": "npm:^24"
+    "@types/node": "npm:^24.13.3"
     "@vitejs/plugin-vue": "npm:^5.2.1"
-    naive-ui: "npm:^2"
+    naive-ui: "npm:^2.45.2"
     typescript: "npm:^5.6.3"
     vite: "npm:^6"
-    vue: "npm:^3"
-    vue-i18n: "npm:^11"
+    vue: "npm:^3.5.41"
+    vue-i18n: "npm:^11.4.8"
     vue-router: "npm:^4.5.0"
     vue-tsc: "npm:^2.1.10"
   languageName: unknown
