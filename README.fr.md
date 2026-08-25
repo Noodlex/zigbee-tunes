@@ -86,7 +86,7 @@ docker compose --profile full up -d
 docker compose logs -f zigbee-tunes
 ```
 
-Voir [config.example.yaml](config.example.yaml) pour la configuration complète.
+Voir [example-config.yaml](example-config.yaml) pour la configuration complète.
 
 ## Configuration
 

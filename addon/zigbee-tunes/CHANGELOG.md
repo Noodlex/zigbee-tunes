@@ -4,6 +4,17 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.2.1 — Quieter Supervisor logs
+
+### Fixed
+- The Supervisor no longer warns about `config.example.yaml` and
+  `config.template.yaml` at every startup. It scans an add-on repository for
+  files that look like an add-on config, tried to parse those two, and logged
+  "Invalid Add-on config" for each — one is the standalone Docker example, the
+  other the entrypoint's template, and neither describes an add-on. They are
+  now `example-config.yaml` and `options.template.yaml`, outside what the
+  Supervisor picks up. Harmless noise, but noise on every boot. Reported in #5.
+
 ## 1.2.0 — Set a range on a slider, in mireds or in percent
 
 ### Added
