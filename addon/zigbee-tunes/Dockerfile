@@ -85,7 +85,9 @@ COPY --from=ui-build /ui/dist ./ui/dist
 
 # Add-on glue (these files ARE in the build context).
 COPY run.sh /run.sh
-COPY config.template.yaml /etc/zigbee-tunes/config.template.yaml
+# Renamed in the repo (options.template.yaml) so the Supervisor stops trying to
+# parse it as an add-on config; the in-image path is unchanged, run.sh reads it.
+COPY options.template.yaml /etc/zigbee-tunes/config.template.yaml
 RUN chmod +x /run.sh
 
 ENV NODE_ENV=production
@@ -98,6 +100,6 @@ LABEL \
   io.hass.name="Zigbee Tunes" \
   io.hass.description="Z2M Discovery Manager" \
   io.hass.type="addon" \
-  io.hass.version="1.2.0" \
+  io.hass.version="1.2.1" \
   io.hass.arch="amd64|aarch64" \
   maintainer="Noodlex <14205390+Noodlex@users.noreply.github.com>"
