@@ -37,8 +37,13 @@ export interface ApiOptions {
 
 export async function createApiServer(deps: ApiDeps): Promise<FastifyInstance> {
   const fastify = Fastify({
-    logger: false, // we already use winston, no need to double-log
-    disableRequestLogging: true,
+    // We log through winston instead (see the onResponse hook below), so
+    // Fastify gets no logger at all. That already silences request logging:
+    // with `logger: false` Fastify installs abstract-logging, and every
+    // `request.log.*` call is a no-op. `disableRequestLogging` would only
+    // gate calls that already do nothing — and it is deprecated in 5.x,
+    // removed in 6.
+    logger: false,
   });
 
   // CORS disabled by default: the UI is served by Fastify from the same
