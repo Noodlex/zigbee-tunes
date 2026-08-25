@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # Standalone Zigbee Tunes image (for `docker compose up` on any host).
-# The HA Add-on has its own Dockerfile under addon/zigbee-tunes/Dockerfile.
+# The HA app has its own Dockerfile under addon/zigbee-tunes/Dockerfile.
 
 # ---- Stage 1: build backend (TS -> JS) ----
 FROM node:24-bookworm-slim AS backend-build

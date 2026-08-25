@@ -1,6 +1,6 @@
 ---
-# Home Assistant add-on metadata. Documentation:
-# https://developers.home-assistant.io/docs/add-ons/configuration/
+# Home Assistant app metadata. Documentation:
+# https://developers.home-assistant.io/docs/apps/configuration
 
 name: Zigbee Tunes
 slug: zigbee-tunes
@@ -18,7 +18,7 @@ boot: auto
 startup: services
 stage: stable
 
-# We need MQTT credentials. `need` = HA refuses to start the add-on if no
+# We need MQTT credentials. `need` = HA refuses to start the app if no
 # MQTT broker is configured (sane default — Zigbee Tunes is useless without it).
 services:
   - mqtt:need
@@ -39,7 +39,7 @@ ports_description:
   "8099/tcp": "Web UI + REST API (optional — ingress works without this)"
 
 # /data is persisted across restarts: that's where SQLite lives.
-# /share is shared with other add-ons (we don't use it, declared for future).
+# /share is shared with other apps (we don't use it, declared for future).
 map:
   - data:rw
 

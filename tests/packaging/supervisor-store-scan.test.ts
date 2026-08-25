@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Guards the fix for issue #5.
  *
- * When a repository is added as an app (add-on) store, the Supervisor walks the
+ * When a repository is added as an app store, the Supervisor walks the
  * whole clone looking for app configs and logs a warning for every candidate it
  * cannot parse as one. Two of our files matched that pattern without being app
  * configs — the standalone Docker example and the entrypoint's options template

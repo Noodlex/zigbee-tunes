@@ -1,9 +1,9 @@
 #!/usr/bin/env bashio
-# We don't ship s6-overlay (single-process add-on), so we skip the
+# We don't ship s6-overlay (single-process app), so we skip the
 # `with-contenv` wrapper and rely on Supervisor-provided env vars directly.
 # shellcheck shell=bash
 # ==============================================================================
-# Zigbee Tunes Home Assistant Add-on entrypoint.
+# Zigbee Tunes Home Assistant app entrypoint.
 # Reads HA options + MQTT service config, materializes
 # /tmp/zigbee-tunes.config.yaml from the template, then execs Node.
 # ==============================================================================
@@ -14,7 +14,7 @@ set -euo pipefail
 # fails it means the user has no MQTT broker configured in HA — abort with
 # a clear message.
 if ! bashio::services.available "mqtt"; then
-  bashio::exit.nok "No MQTT broker found. Install the 'Mosquitto broker' add-on (or configure an external one) before starting Zigbee Tunes."
+  bashio::exit.nok "No MQTT broker found. Install the 'Mosquitto broker' app (or configure an external one) before starting Zigbee Tunes."
 fi
 
 mqtt_host=$(bashio::services "mqtt" "host")

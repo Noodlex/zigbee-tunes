@@ -53,7 +53,7 @@ _bmad/
 _bmad-output/
 
 # Local config et données runtime
-# Anchored at root so addon/zigbee-tunes/config.yaml (HA add-on metadata) is tracked.
+# Anchored at root so addon/zigbee-tunes/config.yaml (HA app metadata) is tracked.
 /config.yaml
 /data/
 *.db
