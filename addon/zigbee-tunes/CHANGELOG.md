@@ -8,12 +8,23 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - The Supervisor no longer warns about `config.example.yaml` and
-  `config.template.yaml` at every startup. It scans an add-on repository for
-  files that look like an add-on config, tried to parse those two, and logged
-  "Invalid Add-on config" for each — one is the standalone Docker example, the
-  other the entrypoint's template, and neither describes an add-on. They are
-  now `example-config.yaml` and `options.template.yaml`, outside what the
-  Supervisor picks up. Harmless noise, but noise on every boot. Reported in #5.
+  `config.template.yaml` at every startup. It scans a repository added as an
+  app store for files that look like an app config, tried to parse those two,
+  and logged `Invalid app config!` for each — one is the standalone Docker
+  example, the other the entrypoint's template, and neither describes an app.
+  They are now `example-config.yaml` and `options.template.yaml`, outside what
+  the Supervisor picks up. Harmless noise, but noise on every boot. A
+  regression test now replays the Supervisor's own scan over the repository,
+  so a stray file cannot bring the warnings back. Reported in #5.
+
+### Changed
+- Dependencies were brought up to date, including several major versions.
+  Backend: `@fastify/cors` 10 → 11, `@fastify/static` 9 → 10, TypeScript 7
+  (the native compiler), vitest 3 → 4. UI: Vite 6 → 8, vue-router 4 → 5,
+  `@vitejs/plugin-vue` 5 → 6, vue-tsc 3. Toolchain: Yarn 4.18. No behaviour
+  change is intended — the full suite and both builds pass on the new
+  versions — but this is a large toolchain move for a patch release, so it is
+  worth knowing about if you build the image yourself.
 
 ## 1.2.0 — Set a range on a slider, in mireds or in percent
 
