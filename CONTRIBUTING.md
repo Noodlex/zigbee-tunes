@@ -57,8 +57,16 @@ ha apps info local_zigbee-tunes    # our app, as the store sees it
 ```
 
 To reproduce something reported against the published repository rather than
-the working copy, add it as a store: `ha store repositories add
-https://github.com/Noodlex/zigbee-tunes`.
+the working copy, add it as a store — this clones `main`, so it tests what
+users get, not your tree:
+
+```bash
+ha store add https://github.com/Noodlex/zigbee-tunes
+ha apps info 54167735_zigbee-tunes    # the hash is derived from the URL
+```
+
+`ha store reload` sometimes returns a client-side HTTP timeout while the
+reload still completes; check the logs rather than trusting the exit code.
 
 ### What it does not test
 
