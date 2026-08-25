@@ -19,16 +19,20 @@
   // build and run apps, rather than borrowing the host socket.
   "runArgs": ["--privileged"],
 
-  // The folder name is hard-coded instead of ${localWorkspaceFolderBasename}.
-  // A working copy may sit in a directory whose name contains a space, and
-  // the Supervisor would then have to scan "/mnt/supervisor/apps/local/Some
-  // Folder". Pinning the name keeps that path predictable wherever the
-  // repository is cloned.
-  "workspaceFolder": "/mnt/supervisor/apps/local/zigbee-tunes",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/mnt/supervisor/apps/local/zigbee-tunes,type=bind,consistency=cached",
+  // "addons/local", not "apps/local". Upstream's own example still says
+  // apps/local and the image warns about it: since supervisor#5974 the build
+  // is delegated to a separate container, which can only mount the app folder
+  // if it sits inside the Supervisor's data directory. Discovery works either
+  // way — building does not. See home-assistant/devcontainer#135.
+  //
+  // The folder name is hard-coded instead of ${localWorkspaceFolderBasename}:
+  // a working copy may sit in a directory whose name contains a space, and the
+  // Supervisor would then have to scan ".../addons/local/Some Folder".
+  "workspaceFolder": "/mnt/supervisor/addons/local/zigbee-tunes",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/mnt/supervisor/addons/local/zigbee-tunes,type=bind,consistency=cached",
 
   "containerEnv": {
-    "WORKSPACE_DIRECTORY": "/mnt/supervisor/apps/local/zigbee-tunes",
+    "WORKSPACE_DIRECTORY": "/mnt/supervisor/addons/local/zigbee-tunes",
     // Reproduce what users run. Upstream's own example uses "beta" because
     // they develop against what is coming; we care about what is shipped.
     "SUPERVISOR_CHANNEL": "stable"

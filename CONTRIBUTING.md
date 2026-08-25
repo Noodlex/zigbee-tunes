@@ -74,6 +74,24 @@ Files that live in the build context — `run.sh`, `options.template.yaml`,
 packaging and startup glue is genuinely covered. Application logic is covered
 by `yarn test`. Between the two, nothing is left untested.
 
+### Warnings about your own untracked files
+
+The devcontainer bind-mounts your **working directory**, not a clean clone, so
+the Supervisor also scans files git ignores. Expect warnings like:
+
+```
+Can't read /data/apps/local/zigbee-tunes/config.yaml: Invalid app config!
+```
+
+Those are yours — the local standalone `config.yaml`, tooling folders — and
+they never reach a user, because the Supervisor clones a repository and a clone
+contains only tracked files. `tests/packaging/supervisor-store-scan.test.ts`
+checks tracked files for exactly that reason.
+
+They look identical to the warnings reported in #5. Before assuming a
+regression, check whether the file is tracked: `git ls-files --error-unmatch
+<path>`.
+
 ## Before opening a pull request
 
 Both must be green — CI runs them on every PR:
