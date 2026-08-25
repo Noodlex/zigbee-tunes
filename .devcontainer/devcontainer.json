@@ -1,0 +1,52 @@
+{
+  // Runs a real Supervisor and a real Home Assistant, with this repository
+  // mounted as a local app store. Use it for questions only a Supervisor can
+  // answer — store scanning, config.yaml validation, ingress, bashio, /data.
+  // Application logic is covered by `yarn test`; this is slower and heavier,
+  // so reach for it when reading upstream source is not enough.
+  //
+  // See CONTRIBUTING.md for what this does and does not actually test.
+  "name": "Zigbee Tunes — Home Assistant app",
+  "image": "ghcr.io/home-assistant/devcontainer:5-apps",
+  "overrideCommand": false,
+  "remoteUser": "vscode",
+
+  // Home Assistant lands on http://localhost:7123/
+  "appPort": ["7123:8123", "7357:4357"],
+  "postStartCommand": "bash devcontainer_bootstrap",
+
+  // --privileged is required: the container runs its own Docker daemon to
+  // build and run apps, rather than borrowing the host socket.
+  "runArgs": ["--privileged"],
+
+  // The folder name is hard-coded instead of ${localWorkspaceFolderBasename}.
+  // A working copy may sit in a directory whose name contains a space, and
+  // the Supervisor would then have to scan "/mnt/supervisor/apps/local/Some
+  // Folder". Pinning the name keeps that path predictable wherever the
+  // repository is cloned.
+  "workspaceFolder": "/mnt/supervisor/apps/local/zigbee-tunes",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/mnt/supervisor/apps/local/zigbee-tunes,type=bind,consistency=cached",
+
+  "containerEnv": {
+    "WORKSPACE_DIRECTORY": "/mnt/supervisor/apps/local/zigbee-tunes",
+    // Reproduce what users run. Upstream's own example uses "beta" because
+    // they develop against what is coming; we care about what is shipped.
+    "SUPERVISOR_CHANNEL": "stable"
+  },
+
+  "mounts": [
+    "type=volume,target=/var/lib/docker",
+    "type=volume,target=/var/lib/containerd",
+    "type=volume,target=/mnt/supervisor",
+    "type=tmpfs,target=/tmp"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["timonwong.shellcheck"],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  }
+}
