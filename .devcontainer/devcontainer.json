@@ -1,0 +1,56 @@
+{
+  // Runs a real Supervisor and a real Home Assistant, with this repository
+  // mounted as a local app store. Use it for questions only a Supervisor can
+  // answer — store scanning, config.yaml validation, ingress, bashio, /data.
+  // Application logic is covered by `yarn test`; this is slower and heavier,
+  // so reach for it when reading upstream source is not enough.
+  //
+  // See CONTRIBUTING.md for what this does and does not actually test.
+  "name": "Zigbee Tunes — Home Assistant app",
+  "image": "ghcr.io/home-assistant/devcontainer:5-apps",
+  "overrideCommand": false,
+  "remoteUser": "vscode",
+
+  // Home Assistant lands on http://localhost:7123/
+  "appPort": ["7123:8123", "7357:4357"],
+  "postStartCommand": "bash devcontainer_bootstrap",
+
+  // --privileged is required: the container runs its own Docker daemon to
+  // build and run apps, rather than borrowing the host socket.
+  "runArgs": ["--privileged"],
+
+  // "addons/local", not "apps/local". Upstream's own example still says
+  // apps/local and the image warns about it: since supervisor#5974 the build
+  // is delegated to a separate container, which can only mount the app folder
+  // if it sits inside the Supervisor's data directory. Discovery works either
+  // way — building does not. See home-assistant/devcontainer#135.
+  //
+  // The folder name is hard-coded instead of ${localWorkspaceFolderBasename}:
+  // a working copy may sit in a directory whose name contains a space, and the
+  // Supervisor would then have to scan ".../addons/local/Some Folder".
+  "workspaceFolder": "/mnt/supervisor/addons/local/zigbee-tunes",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/mnt/supervisor/addons/local/zigbee-tunes,type=bind,consistency=cached",
+
+  "containerEnv": {
+    "WORKSPACE_DIRECTORY": "/mnt/supervisor/addons/local/zigbee-tunes",
+    // Reproduce what users run. Upstream's own example uses "beta" because
+    // they develop against what is coming; we care about what is shipped.
+    "SUPERVISOR_CHANNEL": "stable"
+  },
+
+  "mounts": [
+    "type=volume,target=/var/lib/docker",
+    "type=volume,target=/var/lib/containerd",
+    "type=volume,target=/mnt/supervisor",
+    "type=tmpfs,target=/tmp"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["timonwong.shellcheck"],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  }
+}

@@ -26,7 +26,10 @@ ui/dist/
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+# ...but the devcontainer task is shared: it is how you start the
+# Supervisor from VS Code. Personal editor settings stay ignored.
+!.vscode/tasks.json
 *.iml
 *.suo
 *.user
