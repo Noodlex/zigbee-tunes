@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# Home Assistant Add-on build.
+# Home Assistant app build.
 #
 # Two design notes that bit us in v0.1.0:
 #
@@ -8,13 +8,16 @@
 #    (addon/zigbee-tunes/), not the repo root. So we cannot `COPY` files
 #    from src/, ui/, package.json, etc. — those live one level up. We work
 #    around this by cloning the Zigbee Tunes source from GitHub inside the
-#    build, the same pattern Z2M's own add-on uses.
+#    build, the same pattern Z2M's own app uses.
 #
-# 2) HA Supervisor 2026.x ignores our build.yaml's `build_from` and
-#    forces ghcr.io/home-assistant/base:latest (Alpine) as BUILD_FROM.
-#    That base has no Node.js. We bypass that entirely by hard-coding
-#    `FROM node:24-bookworm-slim` — Docker pulls the right arch variant
-#    from the multi-arch manifest, so amd64 + aarch64 work.
+# 2) We hard-code `FROM node:24-bookworm-slim` rather than take a base from
+#    the Supervisor. This began as a workaround — it ignored build.yaml's
+#    `build_from` and forced the Alpine base, which carries no Node.js — but
+#    it is now simply how this is done. Since Supervisor 2026.04.0 no
+#    `BUILD_FROM` is provided at all and build.yaml is not read: base images
+#    come from `FROM`, labels from `LABEL`, custom arguments from `ARG`.
+#    Docker resolves the right arch variant from the multi-arch manifest, so
+#    amd64 + aarch64 both work.
 
 # ---- Stage 1: fetch source ----
 FROM node:24-bookworm-slim AS source
@@ -83,10 +86,10 @@ COPY --from=backend-build /app/dist ./dist
 COPY --from=source /src/src/db/schema.sql ./dist/db/schema.sql
 COPY --from=ui-build /ui/dist ./ui/dist
 
-# Add-on glue (these files ARE in the build context).
+# App glue (these files ARE in the build context).
 COPY run.sh /run.sh
 # Renamed in the repo (options.template.yaml) so the Supervisor stops trying to
-# parse it as an add-on config; the in-image path is unchanged, run.sh reads it.
+# parse it as an app config; the in-image path is unchanged, run.sh reads it.
 COPY options.template.yaml /etc/zigbee-tunes/config.template.yaml
 RUN chmod +x /run.sh
 
@@ -99,7 +102,7 @@ CMD ["/run.sh"]
 LABEL \
   io.hass.name="Zigbee Tunes" \
   io.hass.description="Z2M Discovery Manager" \
-  io.hass.type="addon" \
+  io.hass.type="app" \
   io.hass.version="1.2.1" \
   io.hass.arch="amd64|aarch64" \
   maintainer="Noodlex <14205390+Noodlex@users.noreply.github.com>"
