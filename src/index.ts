@@ -26,7 +26,7 @@ async function main(): Promise<void> {
 
   // Retention: purge transformation logs older than 7 days to keep the
   // table from growing indefinitely. Runs at startup AND once a day —
-  // an add-on can run for months without restarting.
+  // an app can run for months without restarting.
   const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
   const purgeOldLogs = () => {
     const purged = deviceRepo.deleteLogsBefore(Date.now() - LOG_RETENTION_MS);

@@ -1,4 +1,4 @@
-# Zigbee Tunes config template — used by the HA Add-on entrypoint.
+# Zigbee Tunes config template — used by the HA app entrypoint.
 # Values come from /data/options.json and the MQTT service injected by HA.
 # run.sh exports them as env vars; Zigbee Tunes expands ${VAR} at load time.
 
@@ -14,7 +14,7 @@ topics:
   z2m_base: ${TOPICS_Z2M_BASE:-zigbee2mqtt}
 
 database:
-  # Persisted across add-on restarts via the `data:rw` map entry.
+  # Persisted across app restarts via the `data:rw` map entry.
   path: /data/zigbee-tunes.db
 
 api:

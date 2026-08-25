@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 
 /**
  * Reads the short SHA of the current Git commit to inject into the bundle.
- * - `ZIGBEE_TUNES_COMMIT_SHA` env var wins (the HA Add-on Dockerfile sets it
+ * - `ZIGBEE_TUNES_COMMIT_SHA` env var wins (the HA app Dockerfile sets it
  *   because the source is cloned in an earlier stage and `.git` is not
  *   carried over to the UI build stage).
  * - Otherwise we fall back to `git rev-parse --short HEAD` (works in dev
@@ -22,7 +22,7 @@ function getCommitSha(): string {
 
 export default defineConfig({
   plugins: [vue()],
-  // Relative asset paths: required for the HA Add-on Ingress, which serves
+  // Relative asset paths: required for the HA app Ingress, which serves
   // the UI under `/api/hassio_ingress/<token>/`. Absolute `/assets/...`
   // would 404 there. Relative paths also work fine in standalone Docker
   // and Vite dev.
