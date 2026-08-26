@@ -59,16 +59,44 @@ function isScannedBySupervisor(file: string): boolean {
   return FILE_SUFFIX_CONFIGURATION.some((suffix) => name.endsWith(suffix));
 }
 
-describe('Supervisor app-store scan', () => {
-  const scanned = trackedFiles().filter(isScannedBySupervisor);
+/**
+ * Only git can tell us what a clone would contain, so the scan can only be
+ * replayed inside a work tree. CI always checks one out, so this never skips
+ * there — it skips for someone running the suite from a downloaded tarball,
+ * where the question is unanswerable rather than failing.
+ *
+ * Deliberately not called at module scope: a throw there fails collection of
+ * the whole file, which reads as a broken test suite rather than an
+ * inapplicable check.
+ */
+function inGitWorkTree(): boolean {
+  try {
+    execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+      cwd: REPO_ROOT,
+      stdio: 'pipe',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
+let cached: string[] | null = null;
+
+/** Resolved on first use, so nothing runs before the suite is known to apply. */
+function scannedFiles(): string[] {
+  if (cached === null) cached = trackedFiles().filter(isScannedBySupervisor);
+  return cached;
+}
+
+describe.skipIf(!inGitWorkTree())('Supervisor app-store scan', () => {
   it('still finds the app config', () => {
     // If this breaks, the app disappears from the store entirely.
-    expect(scanned).toContain(APP_CONFIG);
+    expect(scannedFiles()).toContain(APP_CONFIG);
   });
 
   it('offers the Supervisor nothing else to choke on', () => {
-    const strays = scanned.filter((file) => file !== APP_CONFIG);
+    const strays = scannedFiles().filter((file) => file !== APP_CONFIG);
 
     expect(
       strays,

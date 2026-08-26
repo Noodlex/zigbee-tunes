@@ -6,8 +6,10 @@ guidelines are short.
 
 ## Prerequisites
 
-- **Node.js 22.5+** (the DB layer uses the built-in `node:sqlite`, no
-  native module to compile)
+- **Node.js 22.12+ or 24+** — three floors stack up: `node:sqlite` (used by
+  the DB layer, no native module to compile) lands in 22.5, Vite 8 raises it
+  to 22.12, and vitest 4 supports `^22` or `>=24` but **not 23**. CI and both
+  Docker images run 24.
 - **Corepack** enabled once per machine: `corepack enable` (pins the
   Yarn 4 version from `package.json`)
 - Docker (optional, for a local Mosquitto broker)
