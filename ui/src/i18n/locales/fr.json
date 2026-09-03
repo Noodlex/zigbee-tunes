@@ -109,7 +109,9 @@
     "elsewhere": "Sur une autre configuration ({count}) — en cocher un le déplace ici",
     "leaving": "quitte {config}",
     "unassigned": "Sans configuration ({count})",
-    "none_left": "Tous les équipements éligibles sont déjà sur cette configuration."
+    "none_left": "Tous les équipements éligibles sont déjà sur cette configuration.",
+    "blocked": "Couverts par une règle plus large ({count}) — les affecter ne changerait rien",
+    "blocked_by": "une règle visant plus que cet appareil l'emporte en priorité {priority}"
   },
   "dashboard": {
     "title": "Tableau de bord",

@@ -109,7 +109,9 @@
     "elsewhere": "On another configuration ({count}) — ticking one moves it here",
     "leaving": "leaves {config}",
     "unassigned": "Without a configuration ({count})",
-    "none_left": "Every eligible device is already on this configuration."
+    "none_left": "Every eligible device is already on this configuration.",
+    "blocked": "Covered by a broader rule ({count}) — assigning would change nothing",
+    "blocked_by": "a rule matching more than this device wins at priority {priority}"
   },
   "dashboard": {
     "title": "Dashboard",

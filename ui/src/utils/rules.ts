@@ -119,7 +119,17 @@ export function cctRangeStats(devices: Device[]): CctRangeStats {
  * Returns null for `entity-rename`: its value is unique per device by
  * nature, so colouring it would yield one colour per row and group nothing.
  */
-export function ruleSignature(rule: AppliedRule): string | null {
+/**
+ * Just the parts a signature is made of. Widened from AppliedRule so an
+ * editor can ask "what would these values be a signature for?" before any
+ * rule exists to carry them.
+ */
+export type RuleValues = Pick<
+  AppliedRule,
+  'type' | 'min_mireds' | 'max_mireds' | 'area' | 'max_scale'
+>;
+
+export function ruleSignature(rule: RuleValues): string | null {
   switch (rule.type) {
     case 'color-temp-range':
       return `color-temp-range|${rule.min_mireds ?? ''}|${rule.max_mireds ?? ''}`;
@@ -217,6 +227,9 @@ export function capabilityForRuleType(type: string): string | null {
   }
 }
 
+/** Priority `/api/devices/apply` gives the rule it creates. */
+export const APPLY_PRIORITY = 50;
+
 /** A device that already has a configuration of this type, and which one. */
 export interface ElsewhereEntry {
   device: Device;
@@ -231,6 +244,13 @@ export interface AssignmentBuckets {
   elsewhere: ElsewhereEntry[];
   /** Eligible, but with no configuration of this type at all. */
   unassigned: Device[];
+  /**
+   * Governed by a broader rule (`*`, `@vendor:`…) that outranks what an
+   * assignment would create, so assigning them would change nothing. Listed
+   * apart rather than offered: a tick that silently does nothing is worse
+   * than a device that isn't on the list.
+   */
+  blocked: ElsewhereEntry[];
 }
 
 /**
@@ -249,22 +269,44 @@ export function assignmentBuckets(
   sig: string,
 ): AssignmentBuckets {
   const capability = capabilityForRuleType(type);
-  const buckets: AssignmentBuckets = { assigned: [], elsewhere: [], unassigned: [] };
+  const buckets: AssignmentBuckets = {
+    assigned: [],
+    elsewhere: [],
+    unassigned: [],
+    blocked: [],
+  };
 
   for (const device of fleet) {
+    // A device advertising nothing (the Coordinator, an entry seen only through
+    // bridge/devices) cannot be acted on at all — the Devices view hides those
+    // for the same reason. This also covers the rule types no capability gates.
+    if (device.capabilities.length === 0) continue;
     if (capability !== null && !device.capabilities.includes(capability)) continue;
 
     const own = specificRulesFor(device).filter((r) => r.type === type);
     // Destructured rather than length-checked: it proves to the compiler that
     // the rule handed to `elsewhere` exists, without an assertion.
     const [first] = own;
-    if (first === undefined) {
-      buckets.unassigned.push(device);
+    if (first !== undefined) {
+      const here = own.find((r) => ruleSignature(r) === sig);
+      if (here) buckets.assigned.push(device);
+      else buckets.elsewhere.push({ device, rule: first });
       continue;
     }
-    const here = own.find((r) => ruleSignature(r) === sig);
-    if (here) buckets.assigned.push(device);
-    else buckets.elsewhere.push({ device, rule: first });
+
+    /*
+     * No rule of its own. It may still be governed by a broader one, and
+     * `applied_rules` holds the winner for each type. Assignment creates a
+     * rule at APPLY_PRIORITY, and resolution keeps the incumbent on a tie
+     * (the comparison is a strict `>`), so it only takes effect against a
+     * strictly lower priority. Anything else would be an inert tick.
+     */
+    const governing = device.applied_rules.find((r) => r.type === type);
+    if (governing !== undefined && governing.priority >= APPLY_PRIORITY) {
+      buckets.blocked.push({ device, rule: governing });
+    } else {
+      buckets.unassigned.push(device);
+    }
   }
 
   return buckets;
