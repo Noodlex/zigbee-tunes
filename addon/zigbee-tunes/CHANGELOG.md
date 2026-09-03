@@ -4,6 +4,51 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.3.0 — Put a device on a configuration without leaving the dialog
+
+### Added
+- The rule editor now **lists the fleet**, so another device can join a
+  configuration from the dialog that defines it. Before, that meant going to
+  the Devices page, finding the device, and re-typing the same values — and
+  they had to match exactly, or you silently created a second configuration
+  instead of joining the first.
+
+  Devices are grouped by what ticking one would actually do: those already on
+  the configuration (folded away, nothing to decide), those on a **different**
+  configuration of the same type, and those with none. The middle group spells
+  out what a device would leave — applying a rule drops it from its previous
+  one of the same type, so an addition costs it its old configuration, and that
+  should be a decision rather than a discovery afterwards.
+
+  Devices a rule cannot act on are left out: a colour-temperature range means
+  nothing to a contact sensor. So are devices already governed by a broader
+  rule that outranks what an assignment would create — those are listed with
+  the reason but cannot be ticked, because the tick would save without
+  changing anything.
+
+### Changed
+- The repository now announces itself as **Zigbee Tunes** in the Home Assistant
+  store, and the app calls itself an app throughout — including the message you
+  see when no MQTT broker is configured. Home Assistant retired "add-on"; the
+  wording here had not caught up.
+
+### Fixed
+- The backend no longer logs a Fastify deprecation warning on every start. The
+  option it complained about was gating log calls that were already no-ops, and
+  Fastify 6 removes it outright.
+- `engines.node` said 22.5+, which stopped being true: Vite 8 needs 22.12, and
+  vitest 4 supports 22 or 24 but **not 23**. It now says `^22.12.0 || >=24.0.0`,
+  matching what CI and both Docker images already run. Only affects building
+  from source.
+
+### Under the hood
+- A devcontainer runs a real Supervisor and a real Home Assistant against a
+  working copy, for the questions reading the source cannot settle — ingress,
+  bashio, `/data`, how the store reacts to `config.yaml`. CONTRIBUTING says what
+  it does and does not cover.
+- A test replays the Supervisor's own app-config scan over the repository, so
+  the warnings fixed in 1.2.1 cannot come back unnoticed.
+
 ## 1.2.1 — Quieter Supervisor logs
 
 ### Fixed
