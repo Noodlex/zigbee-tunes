@@ -10,10 +10,14 @@
 // device its old configuration. Showing what it would leave makes that a
 // decision rather than a surprise.
 //
-// Add-only by design. Unticking a device already on the configuration is NOT
-// offered here: removing means editing or deleting the rules it belongs to —
-// a configuration can span several — which is a different request the row and
-// legend bin buttons already handle.
+// When the subject is the whole configuration, the ticks are its MEMBERSHIP:
+// unticking a device takes it off. That needs a second request — removal edits
+// or deletes the rules the device belongs to, and a configuration can span
+// several — so the dialog does removals first, then one apply.
+//
+// When the subject is a single device (scope "this device"), the assigned
+// group is context rather than a choice: those devices keep what they have, so
+// they are listed read-only and only additions are offered.
 
 import { computed, ref } from 'vue';
 import { NCheckbox } from 'naive-ui';
@@ -27,9 +31,17 @@ const props = defineProps<{
   type: string;
   /** Signature of the configuration being edited. */
   sig: string;
+  /**
+   * Whether unticking an already-assigned device means "take it off". False
+   * when editing one device out of a group: the others are not the subject.
+   */
+  canRemove: boolean;
 }>();
 
-/** IEEEs picked to be added, owned by the parent so it can build its targets. */
+/**
+ * The ticked IEEEs, owned by the parent so it can build its targets. Means
+ * "will carry this configuration" when canRemove, "will be added" otherwise.
+ */
 const picked = defineModel<string[]>('picked', { required: true });
 
 const { t } = useI18n();
@@ -53,15 +65,38 @@ function isPicked(ieee: string): boolean {
 
 <template>
   <div class="picker">
-    <!-- Already here: folded, because there is nothing to decide about them. -->
+    <!-- On the configuration. Tickable when they are the subject: unticking
+         one takes it off. Otherwise context only, folded away. -->
     <div v-if="buckets.assigned.length" class="group">
-      <button type="button" class="group-head is-button" @click="showAssigned = !showAssigned">
+      <button
+        v-if="!canRemove"
+        type="button"
+        class="group-head is-button"
+        @click="showAssigned = !showAssigned"
+      >
         <span class="caret">{{ showAssigned ? '▾' : '▸' }}</span>
         {{ t('picker.assigned', { count: buckets.assigned.length }) }}
       </button>
-      <ul v-if="showAssigned" class="names">
+      <ul v-if="!canRemove && showAssigned" class="names">
         <li v-for="d in buckets.assigned" :key="d.ieee">{{ d.friendly_name }}</li>
       </ul>
+
+      <template v-if="canRemove">
+        <span class="group-head">
+          {{ t('picker.assigned_removable', { count: buckets.assigned.length }) }}
+        </span>
+        <NCheckbox
+          v-for="d in buckets.assigned"
+          :key="d.ieee"
+          class="row"
+          :checked="isPicked(d.ieee)"
+          @update:checked="(v: boolean) => toggle(d.ieee, v)"
+        >
+          <span class="row-name">{{ d.friendly_name }}</span>
+          <span v-if="!isPicked(d.ieee)" class="row-leaving">{{ t('picker.will_leave') }}</span>
+          <span v-else class="row-model">{{ d.model_id }}</span>
+        </NCheckbox>
+      </template>
     </div>
 
     <!-- On another configuration: ticking one is a move, so say what it costs. -->

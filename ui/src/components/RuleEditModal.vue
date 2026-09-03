@@ -9,7 +9,12 @@ import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
 import DeviceAssignPicker from './DeviceAssignPicker.vue';
-import { isRangeOrdered, ruleSignature, type RuleValues } from '../utils/rules';
+import {
+  isRangeOrdered,
+  ruleSignature,
+  specificRulesFor,
+  type RuleValues,
+} from '../utils/rules';
 import type { AppliedRule, Device } from '../api/types';
 
 const props = defineProps<{
@@ -28,7 +33,14 @@ const props = defineProps<{
 const show = defineModel<boolean>('show', { required: true });
 
 const emit = defineEmits<{
-  save: [payload: { targets: string[]; values: Record<string, unknown> }];
+  save: [
+    payload: {
+      targets: string[];
+      values: Record<string, unknown>;
+      /** Devices to take OFF this configuration, grouped by the rule holding them. */
+      removals: { rule: AppliedRule; ieees: string[] }[];
+    },
+  ];
 }>();
 
 const { t } = useI18n();
@@ -36,8 +48,19 @@ const { t } = useI18n();
 type EditScope = 'device' | 'all';
 
 const scope = ref<EditScope>('device');
-/** Devices ticked in the picker, to be added to this configuration. */
+/**
+ * Ticked in the picker. When the whole configuration is the subject this is its
+ * membership — seeded with the devices already on it, so unticking one is a
+ * removal. When one device is the subject it holds additions only.
+ */
 const picked = ref<string[]>([]);
+
+/** Unticking an assigned device only means something when the group is the subject. */
+const canRemove = computed(() => scope.value === 'all');
+
+function seedPicked() {
+  picked.value = canRemove.value ? props.sharedDevices.map((d) => d.ieee) : [];
+}
 const min = ref<number | null>(null);
 const max = ref<number | null>(null);
 const scale = ref<number | null>(null);
@@ -55,8 +78,19 @@ const sharedNames = computed(() => props.sharedDevices.map((d) => d.friendly_nam
  * Configurations list leaves `device` null, so fall back to the only device
  * using that configuration — otherwise the recap would name nobody.
  */
+/**
+ * Name to show when exactly one device is affected.
+ *
+ * Reads the resolved target, not the configuration's first device: once a
+ * device can be UNTICKED, those differ. Unticking one of two devices left the
+ * footer announcing the one being taken off as the one being changed.
+ */
 const singleTargetName = computed(
-  () => props.device?.friendly_name ?? props.sharedDevices[0]?.friendly_name ?? '',
+  () =>
+    targetDevices.value[0]?.friendly_name ??
+    props.device?.friendly_name ??
+    props.sharedDevices[0]?.friendly_name ??
+    '',
 );
 
 // Prime the fields every time the dialog opens, so a cancelled edit never
@@ -66,7 +100,7 @@ watch(show, (open) => {
   const rule = props.rule;
   if (!rule) return;
   scope.value = props.device === null ? 'all' : 'device';
-  picked.value = [];
+  seedPicked();
   min.value = rule.min_mireds ?? null;
   max.value = rule.max_mireds ?? null;
   scale.value = rule.max_scale ?? null;
@@ -77,6 +111,10 @@ watch(show, (open) => {
         ? (rule.device_name ?? '')
         : '';
 });
+
+// Flipping the scope changes what a tick means, so start from the state that
+// matches the new meaning rather than carrying the old one across.
+watch(scope, seedPicked);
 
 const valid = computed(() => {
   const rule = props.rule;
@@ -108,12 +146,41 @@ const scopeDevices = computed<Device[]>(() => {
  * still drawing a safe zone that no longer holds for everyone.
  */
 const targetDevices = computed<Device[]>(() => {
-  const byIeee = new Map(scopeDevices.value.map((d) => [d.ieee, d]));
+  const pool = [...(props.fleet ?? []), ...props.sharedDevices];
+  const byIeee = new Map<string, Device>();
+  // Membership mode: the ticks ARE the list, so an unticked device must not
+  // sneak back in through the scope.
+  if (!canRemove.value) for (const d of scopeDevices.value) byIeee.set(d.ieee, d);
   for (const ieee of picked.value) {
-    const found = (props.fleet ?? []).find((d) => d.ieee === ieee);
+    const found = pool.find((d) => d.ieee === ieee);
     if (found) byIeee.set(found.ieee, found);
   }
   return [...byIeee.values()];
+});
+
+/**
+ * Devices leaving the configuration, grouped by the rule that holds them: one
+ * configuration can span several rules, and removing device by device would
+ * send target lists computed from the same stale rule.
+ */
+const removals = computed<{ rule: AppliedRule; ieees: string[] }[]>(() => {
+  if (!canRemove.value || !props.rule) return [];
+  const keep = new Set(picked.value.map((i) => i.toLowerCase()));
+  // The rule to take them OFF is the one they actually hold — the
+  // configuration as it was opened. `sig` follows the fields being edited and
+  // would name a configuration these devices are not on.
+  const held = ruleSignature(props.rule);
+  const byRule = new Map<number, { rule: AppliedRule; ieees: string[] }>();
+  for (const device of props.sharedDevices) {
+    if (keep.has(device.ieee.toLowerCase())) continue;
+    for (const r of specificRulesFor(device)) {
+      if (r.type !== props.rule.type || ruleSignature(r) !== held) continue;
+      const found = byRule.get(r.id);
+      if (found) found.ieees.push(device.ieee);
+      else byRule.set(r.id, { rule: r, ieees: [device.ieee] });
+    }
+  }
+  return [...byRule.values()];
 });
 
 /**
@@ -152,6 +219,10 @@ const canAssign = computed(
 /** targetDevices already merges scope and picks, deduplicated by IEEE. */
 const targets = computed<string[]>(() => targetDevices.value.map((d) => d.ieee));
 
+const removedCount = computed(() =>
+  removals.value.reduce((n, g) => n + g.ieees.length, 0),
+);
+
 function buildValues(): Record<string, unknown> {
   const rule = props.rule!;
   const values: Record<string, unknown> = { type: rule.type };
@@ -174,8 +245,15 @@ function buildValues(): Record<string, unknown> {
 }
 
 function onSave() {
-  if (!valid.value || props.saving || targets.value.length === 0) return;
-  emit('save', { targets: targets.value, values: buildValues() });
+  // A save that only removes devices is legitimate: the target list is then
+  // empty and there is nothing to apply, but there is still work to do.
+  const nothingToDo = targets.value.length === 0 && removals.value.length === 0;
+  if (!valid.value || props.saving || nothingToDo) return;
+  emit('save', {
+    targets: targets.value,
+    values: buildValues(),
+    removals: removals.value,
+  });
 }
 </script>
 
@@ -231,6 +309,7 @@ function onSave() {
           :fleet="fleet ?? []"
           :type="rule.type"
           :sig="sig!"
+          :can-remove="canRemove"
           v-model:picked="picked"
         />
       </div>
@@ -250,9 +329,14 @@ function onSave() {
             <template v-if="targets.length > 1">
               {{ t('customizations.modal_targets_many', { count: targets.length }) }}
             </template>
-            <template v-else>
+            <template v-else-if="targets.length === 1">
               {{ t('customizations.modal_targets_one', { device: singleTargetName }) }}
             </template>
+          </span>
+          <!-- Removals are counted separately: they are the half of the save
+               that takes something away, and the target count cannot show it. -->
+          <span v-if="removedCount > 0" class="removals-recap">
+            · {{ t('customizations.modal_removals', { count: removedCount }) }}
           </span>
         </span>
         <NSpace :size="8">
@@ -335,6 +419,12 @@ function onSave() {
 .targets-recap {
   font-size: 11px;
   color: var(--zt-text-hint, #888);
+}
+
+.removals-recap {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zt-text-error, #d03050);
 }
 
 .targets-recap-many {

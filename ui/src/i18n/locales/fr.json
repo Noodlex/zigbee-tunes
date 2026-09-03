@@ -101,7 +101,12 @@
     "delete_config_success": "Configuration retirée de {count} appareil(s) — {republished} payload(s) republié(s)",
     "scope_label": "Appliquer à :",
     "scope_all": "les {count} appareils qui la partagent",
-    "scope_device_hint": "elle deviendra une configuration à part"
+    "scope_device_hint": "elle deviendra une configuration à part",
+    "edit_success_with_removals": "Appliqué à {count} appareil(s), {removed} retiré(s) · {republished} payload(s) republié(s)",
+    "modal_removals": "{count} sera(ont) retiré(s)",
+    "orphans_title": "N'affectant aucun appareil ({count})",
+    "orphans_hint": "Ces règles sont enregistrées mais aucun appareil ne les utilise — leurs cibles ne correspondent à rien, ou une règle de priorité supérieure gagne partout.",
+    "orphan_badge": "0 appareil"
   },
   "picker": {
     "title": "Appliquer aussi à",
@@ -111,7 +116,9 @@
     "unassigned": "Sans configuration ({count})",
     "none_left": "Tous les équipements éligibles sont déjà sur cette configuration.",
     "blocked": "Couverts par une règle plus large ({count}) — les affecter ne changerait rien",
-    "blocked_by": "une règle visant plus que cet appareil l'emporte en priorité {priority}"
+    "blocked_by": "une règle visant plus que cet appareil l'emporte en priorité {priority}",
+    "assigned_removable": "Sur cette configuration ({count}) — décocher pour en retirer un",
+    "will_leave": "sera retiré"
   },
   "dashboard": {
     "title": "Tableau de bord",
