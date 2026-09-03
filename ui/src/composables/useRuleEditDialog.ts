@@ -6,6 +6,7 @@ import { ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessage } from 'naive-ui';
 import { api } from '../api/client';
+import { useRuleActions } from './useRuleActions';
 import type { AppliedRule, Device } from '../api/types';
 
 interface RuleEditDialogApi {
@@ -18,7 +19,11 @@ interface RuleEditDialogApi {
   openForDevice: (device: Device, rule: AppliedRule, shared: Device[]) => void;
   /** Opens on a whole configuration; no scope question, it targets them all. */
   openForConfiguration: (rule: AppliedRule, devices: Device[]) => void;
-  onSave: (payload: { targets: string[]; values: Record<string, unknown> }) => Promise<void>;
+  onSave: (payload: {
+    targets: string[];
+    values: Record<string, unknown>;
+    removals: { rule: AppliedRule; ieees: string[] }[];
+  }) => Promise<void>;
 }
 
 /**
@@ -27,6 +32,7 @@ interface RuleEditDialogApi {
 export function useRuleEditDialog(refresh: () => Promise<void>): RuleEditDialogApi {
   const { t } = useI18n();
   const message = useMessage();
+  const { removeDevicesFromRule } = useRuleActions();
 
   const open = ref(false);
   const rule = ref<AppliedRule | null>(null);
@@ -51,26 +57,54 @@ export function useRuleEditDialog(refresh: () => Promise<void>): RuleEditDialogA
   }
 
   /**
-   * Saves through the smart-apply endpoint: the backend drops the targeted
-   * devices from the existing rules of that type (deleting a rule left without
-   * targets) and recreates one rule with the new values, in a single atomic
-   * refresh.
+   * Removals first, then the apply.
+   *
+   * The order is not cosmetic. Smart-apply strips the targeted devices from
+   * existing rules of that type and deletes a rule left without targets, so
+   * applying first can destroy the very rule a removal was about to edit —
+   * leaving a stale id. Removing first only ever shrinks rules the apply would
+   * have rewritten anyway.
+   *
+   * Removals are pre-grouped by rule id by the dialog: one configuration can
+   * span several rules, and successive single-device calls would each compute
+   * their target list from the same stale rule, putting back what the previous
+   * one removed.
    */
-  async function onSave(payload: { targets: string[]; values: Record<string, unknown> }) {
+  async function onSave(payload: {
+    targets: string[];
+    values: Record<string, unknown>;
+    removals: { rule: AppliedRule; ieees: string[] }[];
+  }) {
     if (saving.value) return;
     saving.value = true;
     try {
-      const res = await api.applyToDevices(payload.targets, [payload.values]);
+      let republished = 0;
+      let removed = 0;
+      for (const group of payload.removals) {
+        const res = await removeDevicesFromRule(group.ieees, group.rule);
+        republished += res.refresh.republished;
+        removed += group.ieees.length;
+      }
+      if (payload.targets.length > 0) {
+        const res = await api.applyToDevices(payload.targets, [payload.values]);
+        republished += res.refresh.republished;
+      }
       message.success(
-        t('customizations.edit_success', {
-          count: payload.targets.length,
-          republished: res.refresh.republished,
-        }),
+        removed > 0
+          ? t('customizations.edit_success_with_removals', {
+              count: payload.targets.length,
+              removed,
+              republished,
+            })
+          : t('customizations.edit_success', { count: payload.targets.length, republished }),
       );
       open.value = false;
       await refresh();
     } catch (e) {
       message.error(t('common.failure_prefix', { message: (e as Error).message }));
+      // A removal may have landed before the failure, so the view is stale
+      // either way: reload rather than leave it showing the old membership.
+      await refresh();
     } finally {
       saving.value = false;
     }

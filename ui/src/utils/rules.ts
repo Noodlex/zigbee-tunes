@@ -311,3 +311,26 @@ export function assignmentBuckets(
 
   return buckets;
 }
+
+/**
+ * Stored rules that no device currently carries.
+ *
+ * `device.applied_rules` holds the WINNING rule per type, so a rule lands here
+ * either because its targets match nothing any more (a device removed from
+ * Z2M) or because a higher-priority rule shadows it everywhere. Both mean the
+ * same thing to a reader: changing it would change nothing. Neither is visible
+ * anywhere else — a rule affecting nobody looks exactly like one affecting the
+ * whole fleet until you count.
+ *
+ * Disabled rules are skipped: they are inert on purpose, not by accident.
+ */
+export function rulesAffectingNoDevice<T extends { id?: number; enabled?: boolean }>(
+  stored: T[],
+  devices: Device[],
+): T[] {
+  const live = new Set<number>();
+  for (const device of devices) {
+    for (const rule of device.applied_rules) live.add(rule.id);
+  }
+  return stored.filter((r) => r.enabled !== false && r.id !== undefined && !live.has(r.id));
+}

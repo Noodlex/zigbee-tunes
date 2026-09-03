@@ -20,9 +20,14 @@ import { useRuleActions } from '../composables/useRuleActions';
 import { useConfigurations, type ConfigEntry } from '../composables/useConfigurations';
 import { useRuleEditDialog } from '../composables/useRuleEditDialog';
 import RuleEditModal from '../components/RuleEditModal.vue';
-import { describeRule, ruleSignature, specificRulesFor } from '../utils/rules';
+import {
+  describeRule,
+  ruleSignature,
+  rulesAffectingNoDevice,
+  specificRulesFor,
+} from '../utils/rules';
 import { isZ2mGroup } from '../utils/devices';
-import type { Device, AppliedRule } from '../api/types';
+import type { Device, AppliedRule, Transformer } from '../api/types';
 
 interface DeviceGroup {
   device: Device;
@@ -32,6 +37,7 @@ interface DeviceGroup {
 
 const { t } = useI18n();
 const devices = ref<Device[]>([]);
+const storedRules = ref<Transformer[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const search = ref('');
@@ -43,13 +49,24 @@ async function refresh() {
   loading.value = true;
   error.value = null;
   try {
-    devices.value = await api.devices();
+    // Both, because a rule affecting nobody cannot be seen from the devices:
+    // it is absent from every applied_rules list, so it simply never appears.
+    const [d, t] = await Promise.all([api.devices(), api.transformers()]);
+    devices.value = d;
+    storedRules.value = t;
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
     loading.value = false;
   }
 }
+
+/**
+ * Stored rules no device is using. Surfaced because nothing else shows them:
+ * they are not in any device's applied_rules, so the configurations list — which
+ * is built from devices — cannot contain them however hard you look.
+ */
+const orphanRules = computed(() => rulesAffectingNoDevice(storedRules.value, devices.value));
 
 /** Groups each modified device with the rules that specifically target it. */
 const allGroups = computed<DeviceGroup[]>(() => {
@@ -132,6 +149,22 @@ async function deleteConfiguration(entry: ConfigEntry) {
   }
 }
 
+/** A rule affecting nobody has no targets worth preserving: delete it whole. */
+async function deleteOrphan(rule: Transformer) {
+  if (busy.value || rule.id === undefined) return;
+  deleting.value = true;
+  try {
+    await api.deleteTransformer(rule.id);
+    message.success(t('customizations.delete_config_success', { count: 0, republished: 0 }));
+    await refresh();
+  } catch (e) {
+    message.error(t('common.failure_prefix', { message: (e as Error).message }));
+    await refresh();
+  } finally {
+    deleting.value = false;
+  }
+}
+
 async function onResetRule(deviceIeee: string, rule: AppliedRule) {
   try {
     const { refresh: r, deleted } = await resetRuleForDevice(deviceIeee, rule);
@@ -184,6 +217,39 @@ onMounted(refresh);
     <!-- Configurations: one line per distinct configuration in use. Devices
          on the same line are normalized identically; editing one device's
          values moves it to its own line (and its own colour). -->
+    <!-- Rules affecting nobody. Kept apart from the configurations list
+         rather than mixed into it: that list describes devices, this one
+         describes leftovers, and merging them would imply these do something. -->
+    <div v-if="orphanRules.length > 0" class="orphans">
+      <div class="orphans-title">
+        {{ t('customizations.orphans_title', { count: orphanRules.length }) }}
+      </div>
+      <div class="orphans-hint">{{ t('customizations.orphans_hint') }}</div>
+      <div class="configs-list">
+        <div v-for="r in orphanRules" :key="r.id" class="config-row config-row-orphan">
+          <div class="config-type">
+            <NTag size="small" :bordered="false" type="warning">{{ r.type }}</NTag>
+          </div>
+          <div class="config-values">{{ describeRule(r as AppliedRule, t) }}</div>
+          <div class="config-devices orphan-badge">{{ t('customizations.orphan_badge') }}</div>
+          <div class="row-actions">
+            <NPopconfirm
+              :on-positive-click="() => deleteOrphan(r)"
+              :positive-text="t('common.remove')"
+              :negative-text="t('common.cancel')"
+            >
+              <template #trigger>
+                <NButton size="small" quaternary circle type="error" :disabled="busy">
+                  <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
+                </NButton>
+              </template>
+              {{ t('customizations.orphans_hint') }}
+            </NPopconfirm>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="configurations.length > 0" class="configs">
       <div class="configs-title">
         {{ t('customizations.configs_title', { count: configurations.length }) }}
@@ -381,6 +447,38 @@ onMounted(refresh);
 </template>
 
 <style scoped>
+.orphans {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--zt-text-warning, #f0a020);
+  background: rgba(240, 160, 32, 0.06);
+}
+
+.orphans-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--zt-text-warning, #f0a020);
+}
+
+.orphans-hint {
+  font-size: 11px;
+  color: var(--zt-text-secondary, #555);
+  margin-bottom: 2px;
+}
+
+.config-row-orphan .config-values {
+  opacity: 0.8;
+}
+
+.orphan-badge {
+  font-weight: 600;
+  color: var(--zt-text-warning, #f0a020);
+}
+
 .device-blocks {
   display: flex;
   flex-direction: column;
