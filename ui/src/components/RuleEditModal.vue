@@ -9,7 +9,7 @@ import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
 import DeviceAssignPicker from './DeviceAssignPicker.vue';
-import { isRangeOrdered, ruleSignature } from '../utils/rules';
+import { isRangeOrdered, ruleSignature, type RuleValues } from '../utils/rules';
 import type { AppliedRule, Device } from '../api/types';
 
 const props = defineProps<{
@@ -92,34 +92,65 @@ const valid = computed(() => {
   }
 });
 
-/**
- * Devices the save will hit. Also feeds the editor, so the slider bounds and
- * the native-range hints follow the chosen scope: one device shows its own
- * range, the whole group shows the envelope and the safe intersection.
- */
-const targetDevices = computed<Device[]>(() => {
+/** Devices the chosen scope covers, before anything is picked. */
+const scopeDevices = computed<Device[]>(() => {
   if (scope.value === 'all') return props.sharedDevices;
   return props.device ? [props.device] : [];
 });
 
 /**
- * A configuration is identified by its values, so a type whose value is unique
- * per device (entity-rename) can never be shared and has nothing to assign.
+ * Devices the save will hit. Also feeds the editor, so the slider bounds, the
+ * native-range hints and the safe intersection follow what is actually about
+ * to change: one device shows its own range, a group shows the envelope.
+ *
+ * Picked devices belong here, not only in the footer count. Leaving them out
+ * would let a warm-only bulb be added to a cool configuration with the editor
+ * still drawing a safe zone that no longer holds for everyone.
  */
-const sig = computed(() => (props.rule ? ruleSignature(props.rule) : null));
+const targetDevices = computed<Device[]>(() => {
+  const byIeee = new Map(scopeDevices.value.map((d) => [d.ieee, d]));
+  for (const ieee of picked.value) {
+    const found = (props.fleet ?? []).find((d) => d.ieee === ieee);
+    if (found) byIeee.set(found.ieee, found);
+  }
+  return [...byIeee.values()];
+});
+
+/**
+ * A configuration is identified by its VALUES, so the buckets have to follow
+ * the fields as they are edited, not the rule the dialog opened on. Otherwise
+ * changing a bound leaves every group describing the previous configuration:
+ * devices on the old values still counted as "already here", devices already
+ * on the new ones offered as moves that would cost them nothing.
+ *
+ * A type whose value is unique per device (entity-rename) has no signature and
+ * nothing to assign.
+ */
+const sig = computed(() => {
+  const rule = props.rule;
+  if (!rule) return null;
+  const draft: RuleValues = { type: rule.type };
+  switch (rule.type) {
+    case 'color-temp-range':
+      if (min.value !== null) draft.min_mireds = min.value;
+      if (max.value !== null) draft.max_mireds = max.value;
+      break;
+    case 'brightness-range':
+      if (scale.value !== null) draft.max_scale = scale.value;
+      break;
+    case 'suggested-area':
+      draft.area = text.value.trim();
+      break;
+  }
+  return ruleSignature(draft);
+});
 
 const canAssign = computed(
   () => sig.value !== null && (props.fleet?.length ?? 0) > 0,
 );
 
-/**
- * Scope devices first, then whatever was ticked. Deduplicated because a picked
- * device can also be in the scope, and the endpoint would otherwise be handed
- * the same IEEE twice.
- */
-const targets = computed<string[]>(() => [
-  ...new Set([...targetDevices.value.map((d) => d.ieee), ...picked.value]),
-]);
+/** targetDevices already merges scope and picks, deduplicated by IEEE. */
+const targets = computed<string[]>(() => targetDevices.value.map((d) => d.ieee));
 
 function buildValues(): Record<string, unknown> {
   const rule = props.rule!;

@@ -97,7 +97,23 @@ function isPicked(ieee: string): boolean {
       </NCheckbox>
     </div>
 
-    <p v-if="!buckets.elsewhere.length && !buckets.unassigned.length" class="none-left">
+    <!-- Governed by a broader rule that outranks what an assignment creates.
+         Shown, not offered: ticking them would save without changing
+         anything, which is worse than not listing them. -->
+    <div v-if="buckets.blocked.length" class="group">
+      <span class="group-head">{{ t('picker.blocked', { count: buckets.blocked.length }) }}</span>
+      <div v-for="b in buckets.blocked" :key="b.device.ieee" class="row row-static">
+        <span class="row-name">{{ b.device.friendly_name }}</span>
+        <span class="row-blocked">
+          {{ t('picker.blocked_by', { priority: b.rule.priority }) }}
+        </span>
+      </div>
+    </div>
+
+    <p
+      v-if="!buckets.elsewhere.length && !buckets.unassigned.length && !buckets.blocked.length"
+      class="none-left"
+    >
       {{ t('picker.none_left') }}
     </p>
   </div>
@@ -175,6 +191,20 @@ function isPicked(ieee: string): boolean {
   font-size: 11px;
   font-style: italic;
   color: var(--zt-text-warning, #f0a020);
+}
+
+.row-static {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-left: 24px;
+  opacity: 0.75;
+}
+
+.row-blocked {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--zt-text-hint, #888);
 }
 
 .row-model,
