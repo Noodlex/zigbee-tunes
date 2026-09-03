@@ -77,16 +77,21 @@ export function useRuleEditDialog(refresh: () => Promise<void>): RuleEditDialogA
   }) {
     if (saving.value) return;
     saving.value = true;
+    // Declared outside the try: the catch needs it to decide whether the
+    // dialog is still describing reality.
+    let landed = false;
     try {
       let republished = 0;
       let removed = 0;
       for (const group of payload.removals) {
         const res = await removeDevicesFromRule(group.ieees, group.rule);
+        landed = true;
         republished += res.refresh.republished;
         removed += group.ieees.length;
       }
       if (payload.targets.length > 0) {
         const res = await api.applyToDevices(payload.targets, [payload.values]);
+        landed = true;
         republished += res.refresh.republished;
       }
       message.success(
@@ -102,8 +107,12 @@ export function useRuleEditDialog(refresh: () => Promise<void>): RuleEditDialogA
       await refresh();
     } catch (e) {
       message.error(t('common.failure_prefix', { message: (e as Error).message }));
-      // A removal may have landed before the failure, so the view is stale
-      // either way: reload rather than leave it showing the old membership.
+      // If part of the sequence landed, the rule ids this dialog captured when
+      // it opened may already be gone — a removal can delete a rule it emptied.
+      // Retrying from here would re-issue a delete against a rule that no
+      // longer exists and fail forever. Close it; the reloaded page carries the
+      // real state. Nothing landed means nothing is stale, so the edit stays.
+      if (landed) open.value = false;
       await refresh();
     } finally {
       saving.value = false;

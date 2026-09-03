@@ -277,20 +277,27 @@ export function assignmentBuckets(
   };
 
   for (const device of fleet) {
-    // A device advertising nothing (the Coordinator, an entry seen only through
-    // bridge/devices) cannot be acted on at all — the Devices view hides those
-    // for the same reason. This also covers the rule types no capability gates.
+    const own = specificRulesFor(device).filter((r) => r.type === type);
+
+    // Membership is decided BEFORE any capability gate. A device already on the
+    // configuration stays listed whatever it advertises — a Z2M group, or one
+    // whose capabilities were never published. Filtering it out would leave it
+    // silently ticked, impossible to untick, and re-targeted on every save.
+    if (own.some((r) => ruleSignature(r) === sig)) {
+      buckets.assigned.push(device);
+      continue;
+    }
+
+    // Candidates are gated: offering a colour-temperature range to a contact
+    // sensor, or to an entry that advertises nothing at all, offers a no-op.
     if (device.capabilities.length === 0) continue;
     if (capability !== null && !device.capabilities.includes(capability)) continue;
 
-    const own = specificRulesFor(device).filter((r) => r.type === type);
     // Destructured rather than length-checked: it proves to the compiler that
     // the rule handed to `elsewhere` exists, without an assertion.
     const [first] = own;
     if (first !== undefined) {
-      const here = own.find((r) => ruleSignature(r) === sig);
-      if (here) buckets.assigned.push(device);
-      else buckets.elsewhere.push({ device, rule: first });
+      buckets.elsewhere.push({ device, rule: first });
       continue;
     }
 
@@ -328,6 +335,12 @@ export function rulesAffectingNoDevice<T extends { id?: number; enabled?: boolea
   stored: T[],
   devices: Device[],
 ): T[] {
+  // No catalog means no evidence, not evidence of absence. On a fresh install
+  // rules are seeded from config.yaml before Z2M has published bridge/devices,
+  // so every one of them would be flagged useless — with a delete button next
+  // to it, offering to wipe a configuration that was never even read yet.
+  if (devices.length === 0) return [];
+
   const live = new Set<number>();
   for (const device of devices) {
     for (const rule of device.applied_rules) live.add(rule.id);

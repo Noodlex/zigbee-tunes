@@ -106,7 +106,9 @@
     "modal_removals": "{count} will be taken off",
     "orphans_title": "Affecting no device ({count})",
     "orphans_hint": "These rules are stored but no device is using them — their targets match nothing, or a higher-priority rule wins everywhere.",
-    "orphan_badge": "0 device"
+    "orphan_badge": "0 device",
+    "orphan_delete_success": "Rule deleted · {republished} payload(s) republished",
+    "orphan_delete_confirm": "Delete this rule? No device is using it."
   },
   "picker": {
     "title": "Also apply to",

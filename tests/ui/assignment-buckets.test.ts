@@ -119,7 +119,18 @@ describe('assignmentBuckets', () => {
     expect(b.blocked[0].rule.priority).toBe(APPLY_PRIORITY);
   });
 
-  it('leaves out devices that advertise nothing, whatever the rule type', () => {
+  it('keeps a member listed even when it advertises nothing', () => {
+    // A Z2M group, or a device whose capabilities were never published, can
+    // still be ON the configuration. Filtering it out would leave it ticked,
+    // impossible to untick, and re-targeted on every save.
+    const groupOnIt = device('0xi', [], [
+      ownRule('0xi', { min_mireds: 153, max_mireds: 333 }),
+    ]);
+    const b = assignmentBuckets([groupOnIt], 'color-temp-range', HERE);
+    expect(b.assigned.map((d) => d.ieee)).toEqual(['0xi']);
+  });
+
+  it('leaves out NON-members that advertise nothing, whatever the rule type', () => {
     // The Coordinator and bridge-only entries: the Devices view hides them as
     // non-actionable, and suggested-area gates on no capability at all.
     const coordinator = device('0xh', []);

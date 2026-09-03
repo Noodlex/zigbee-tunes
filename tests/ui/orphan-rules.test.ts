@@ -51,8 +51,16 @@ describe('rulesAffectingNoDevice', () => {
 
   it('ignores disabled rules — inert on purpose, not by accident', () => {
     const rules = [stored(1, { enabled: false }), stored(2)];
-    const devices: Device[] = [];
+    // A device is needed for the catalog to count as known at all; see below.
+    const devices = [device('0xa', [])];
     expect(rulesAffectingNoDevice(rules, devices).map((r) => r.id)).toEqual([2]);
+  });
+
+  it('flags nothing while the catalog is empty', () => {
+    // On a fresh install rules are seeded from config.yaml before Z2M has
+    // published bridge/devices. An empty catalog is no evidence, and treating
+    // it as proof would offer to delete a whole configuration never read yet.
+    expect(rulesAffectingNoDevice([stored(1), stored(2)], [])).toEqual([]);
   });
 
   it('flags a rule shadowed everywhere by a higher priority one', () => {
@@ -63,7 +71,9 @@ describe('rulesAffectingNoDevice', () => {
     expect(rulesAffectingNoDevice(rules, devices).map((r) => r.id)).toEqual([1]);
   });
 
-  it('treats a whole fleet with no rules as leaving every rule orphaned', () => {
+  it('flags every rule when a known fleet carries none of them', () => {
+    // Devices ARE known here — they simply use nothing. That is real evidence,
+    // unlike an empty catalog.
     expect(rulesAffectingNoDevice([stored(1)], [device('0xa', [])]).map((r) => r.id)).toEqual([1]);
   });
 });

@@ -51,9 +51,12 @@ async function refresh() {
   try {
     // Both, because a rule affecting nobody cannot be seen from the devices:
     // it is absent from every applied_rules list, so it simply never appears.
-    const [d, t] = await Promise.all([api.devices(), api.transformers()]);
-    devices.value = d;
-    storedRules.value = t;
+    // Not destructured to `t`: that shadows the i18n `t` for the rest of this
+    // function, and the day someone adds a message.error(t(...)) to the catch
+    // below it would throw "t is not a function".
+    const [deviceList, ruleList] = await Promise.all([api.devices(), api.transformers()]);
+    devices.value = deviceList;
+    storedRules.value = ruleList;
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -154,8 +157,10 @@ async function deleteOrphan(rule: Transformer) {
   if (busy.value || rule.id === undefined) return;
   deleting.value = true;
   try {
-    await api.deleteTransformer(rule.id);
-    message.success(t('customizations.delete_config_success', { count: 0, republished: 0 }));
+    const res = await api.deleteTransformer(rule.id);
+    message.success(
+      t('customizations.orphan_delete_success', { republished: res.refresh.republished }),
+    );
     await refresh();
   } catch (e) {
     message.error(t('common.failure_prefix', { message: (e as Error).message }));
@@ -243,7 +248,7 @@ onMounted(refresh);
                   <template #icon><NIcon><component :is="IconTrash" /></NIcon></template>
                 </NButton>
               </template>
-              {{ t('customizations.orphans_hint') }}
+              {{ t('customizations.orphan_delete_confirm') }}
             </NPopconfirm>
           </div>
         </div>

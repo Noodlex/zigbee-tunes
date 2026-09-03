@@ -106,7 +106,9 @@
     "modal_removals": "{count} sera(ont) retiré(s)",
     "orphans_title": "N'affectant aucun appareil ({count})",
     "orphans_hint": "Ces règles sont enregistrées mais aucun appareil ne les utilise — leurs cibles ne correspondent à rien, ou une règle de priorité supérieure gagne partout.",
-    "orphan_badge": "0 appareil"
+    "orphan_badge": "0 appareil",
+    "orphan_delete_success": "Règle supprimée · {republished} payload(s) republié(s)",
+    "orphan_delete_confirm": "Supprimer cette règle ? Aucun appareil ne l'utilise."
   },
   "picker": {
     "title": "Appliquer aussi à",
