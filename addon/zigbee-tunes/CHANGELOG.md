@@ -4,6 +4,43 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.4.0 — Take a device off a configuration, and see the rules that do nothing
+
+### Added
+- The rule editor's device list now controls **membership**, not just
+  additions. Devices already on a configuration arrive ticked; unticking one
+  takes it off, with what will happen spelled out on the row and counted
+  separately in the footer. Removing and adding are not the same operation, and
+  one number cannot carry both.
+
+  Offered when the whole configuration is the subject. Editing a single device
+  out of a group leaves the others untouched by definition, so unticking them
+  there would promise something the save does not do.
+
+- **Rules affecting no device** are surfaced in their own block, with a
+  "0 device" badge and a way to delete them. A rule lands there when its targets
+  match nothing — a device removed from Zigbee2MQTT, say — or when a
+  higher-priority rule wins everywhere.
+
+  Nothing showed these before, and not by oversight: the configurations list is
+  built from devices, so a rule nobody carries is structurally absent from it.
+
+### Fixed
+- The page now declares the language it is actually rendering. Only switching
+  the language by hand ever set it, so a visitor who never touched the toggle
+  got a page announcing itself in the wrong language to screen readers and
+  translation tools. Nothing showed this on screen, which is why it lasted.
+- Editing a bound no longer scrambles the device list underneath it. Members
+  used to drop out of "on this configuration" the moment a value changed and
+  reappear as if they were leaving it — while still ticked to be kept.
+- A device on a configuration is now always listed, even when it advertises no
+  capabilities (a Zigbee2MQTT group, or one whose capabilities were never
+  published). It could previously be held on the configuration with no way to
+  take it off.
+- A failed save no longer leaves the dialog holding rules that may already be
+  gone, where retrying would fail forever. It closes when part of the work
+  landed, and stays open — edits intact — when nothing did.
+
 ## 1.3.0 — Put a device on a configuration without leaving the dialog
 
 ### Added

@@ -103,6 +103,6 @@ LABEL \
   io.hass.name="Zigbee Tunes" \
   io.hass.description="Z2M Discovery Manager" \
   io.hass.type="app" \
-  io.hass.version="1.3.0" \
+  io.hass.version="1.4.0" \
   io.hass.arch="amd64|aarch64" \
   maintainer="Noodlex <14205390+Noodlex@users.noreply.github.com>"
