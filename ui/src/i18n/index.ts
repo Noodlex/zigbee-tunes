@@ -26,9 +26,25 @@ function detectInitialLocale(): SupportedLocale {
   return 'en';
 }
 
+/**
+ * Keeps the document's lang attribute in step with the active locale, for
+ * screen readers, translation tools and browser hints.
+ */
+function applyDocumentLang(locale: SupportedLocale): void {
+  if (typeof document !== 'undefined') document.documentElement.lang = locale;
+}
+
+const initialLocale = detectInitialLocale();
+
+// index.html has to declare *something* before any script runs. Correct it as
+// soon as the real locale is known: without this, only switching the language
+// by hand ever updated the attribute, so a visitor who never touched the
+// toggle got a page announcing itself in the wrong language.
+applyDocumentLang(initialLocale);
+
 export const i18n = createI18n({
   legacy: false, // Composition API mode
-  locale: detectInitialLocale(),
+  locale: initialLocale,
   fallbackLocale: 'en',
   messages: { en, fr },
 });
@@ -37,8 +53,7 @@ export const i18n = createI18n({
 export function setLocale(locale: SupportedLocale): void {
   i18n.global.locale.value = locale;
   if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, locale);
-  // Update the document lang attribute for accessibility / browser hints.
-  if (typeof document !== 'undefined') document.documentElement.lang = locale;
+  applyDocumentLang(locale);
 }
 
 /** Current active locale. */
