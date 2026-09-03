@@ -200,3 +200,72 @@ export function describeRule(rule: AppliedRule, t: TranslateFn): string {
       return '';
   }
 }
+
+/**
+ * The capability a rule type needs to mean anything on a device, or null when
+ * it applies to any of them. Offering to put a contact sensor on a
+ * colour-temperature configuration would be offering a no-op.
+ */
+export function capabilityForRuleType(type: string): string | null {
+  switch (type) {
+    case 'color-temp-range':
+      return 'color_temp';
+    case 'brightness-range':
+      return 'brightness';
+    default:
+      return null;
+  }
+}
+
+/** A device that already has a configuration of this type, and which one. */
+export interface ElsewhereEntry {
+  device: Device;
+  /** The rule it would leave — shown so the move is not silent. */
+  rule: AppliedRule;
+}
+
+export interface AssignmentBuckets {
+  /** Already on this exact configuration. */
+  assigned: Device[];
+  /** On a different configuration of the same type: adding them is a move. */
+  elsewhere: ElsewhereEntry[];
+  /** Eligible, but with no configuration of this type at all. */
+  unassigned: Device[];
+}
+
+/**
+ * Splits a fleet by its relationship to one configuration, so the editor can
+ * say who is already on it, who would be moved onto it, and who is simply
+ * available.
+ *
+ * `sig` is the target configuration's signature (type + values). Devices are
+ * matched on their EXPLICIT rules only — see `specificRulesFor`: a device
+ * covered by a fleet-wide `*` rule has no configuration of its own, so it
+ * belongs in `unassigned` rather than looking as if it were already placed.
+ */
+export function assignmentBuckets(
+  fleet: Device[],
+  type: string,
+  sig: string,
+): AssignmentBuckets {
+  const capability = capabilityForRuleType(type);
+  const buckets: AssignmentBuckets = { assigned: [], elsewhere: [], unassigned: [] };
+
+  for (const device of fleet) {
+    if (capability !== null && !device.capabilities.includes(capability)) continue;
+
+    const own = specificRulesFor(device).filter((r) => r.type === type);
+    // Destructured rather than length-checked: it proves to the compiler that
+    // the rule handed to `elsewhere` exists, without an assertion.
+    const [first] = own;
+    if (first === undefined) {
+      buckets.unassigned.push(device);
+      continue;
+    }
+    const here = own.find((r) => ruleSignature(r) === sig);
+    if (here) buckets.assigned.push(device);
+    else buckets.elsewhere.push({ device, rule: first });
+  }
+
+  return buckets;
+}

@@ -8,7 +8,8 @@ import { computed, ref, watch } from 'vue';
 import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
-import { isRangeOrdered } from '../utils/rules';
+import DeviceAssignPicker from './DeviceAssignPicker.vue';
+import { isRangeOrdered, ruleSignature } from '../utils/rules';
 import type { AppliedRule, Device } from '../api/types';
 
 const props = defineProps<{
@@ -18,6 +19,9 @@ const props = defineProps<{
   device: Device | null;
   /** Every device currently using this configuration. */
   sharedDevices: Device[];
+  /** The whole fleet, so the dialog can offer to put more devices on this
+      configuration. Empty disables that section entirely. */
+  fleet?: Device[];
   saving: boolean;
 }>();
 
@@ -32,6 +36,8 @@ const { t } = useI18n();
 type EditScope = 'device' | 'all';
 
 const scope = ref<EditScope>('device');
+/** Devices ticked in the picker, to be added to this configuration. */
+const picked = ref<string[]>([]);
 const min = ref<number | null>(null);
 const max = ref<number | null>(null);
 const scale = ref<number | null>(null);
@@ -60,6 +66,7 @@ watch(show, (open) => {
   const rule = props.rule;
   if (!rule) return;
   scope.value = props.device === null ? 'all' : 'device';
+  picked.value = [];
   min.value = rule.min_mireds ?? null;
   max.value = rule.max_mireds ?? null;
   scale.value = rule.max_scale ?? null;
@@ -95,7 +102,24 @@ const targetDevices = computed<Device[]>(() => {
   return props.device ? [props.device] : [];
 });
 
-const targets = computed<string[]>(() => targetDevices.value.map((d) => d.ieee));
+/**
+ * A configuration is identified by its values, so a type whose value is unique
+ * per device (entity-rename) can never be shared and has nothing to assign.
+ */
+const sig = computed(() => (props.rule ? ruleSignature(props.rule) : null));
+
+const canAssign = computed(
+  () => sig.value !== null && (props.fleet?.length ?? 0) > 0,
+);
+
+/**
+ * Scope devices first, then whatever was ticked. Deduplicated because a picked
+ * device can also be in the scope, and the endpoint would otherwise be handed
+ * the same IEEE twice.
+ */
+const targets = computed<string[]>(() => [
+  ...new Set([...targetDevices.value.map((d) => d.ieee), ...picked.value]),
+]);
 
 function buildValues(): Record<string, unknown> {
   const rule = props.rule!;
@@ -165,6 +189,18 @@ function onSave() {
           v-model:max="max"
           v-model:scale="scale"
           v-model:text="text"
+        />
+      </div>
+
+      <!-- Assignment comes AFTER the values: you decide what a configuration
+           is before deciding who else gets it. -->
+      <div v-if="canAssign" class="assign-block">
+        <span class="assign-label">{{ t('picker.title') }}</span>
+        <DeviceAssignPicker
+          :fleet="fleet ?? []"
+          :type="rule.type"
+          :sig="sig!"
+          v-model:picked="picked"
         />
       </div>
     </div>
@@ -244,6 +280,18 @@ function onSave() {
 
 .fields-block {
   padding-top: 2px;
+}
+
+.assign-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.assign-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--zt-text-secondary, #555);
 }
 
 .modal-footer {
