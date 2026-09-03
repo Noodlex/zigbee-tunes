@@ -8,7 +8,7 @@ description: >-
   Z2M Discovery Manager — normalize Zigbee2MQTT discovery payloads before they
   reach Home Assistant. Tweak color-temp / brightness ranges, rename devices,
   auto-assign areas, all from a web UI.
-version: "1.3.0"
+version: "1.4.0"
 url: https://github.com/Noodlex/zigbee-tunes
 arch:
   - amd64
