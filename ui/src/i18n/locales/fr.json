@@ -103,6 +103,14 @@
     "scope_all": "les {count} appareils qui la partagent",
     "scope_device_hint": "elle deviendra une configuration à part"
   },
+  "picker": {
+    "title": "Appliquer aussi à",
+    "assigned": "Déjà sur cette configuration ({count})",
+    "elsewhere": "Sur une autre configuration ({count}) — en cocher un le déplace ici",
+    "leaving": "quitte {config}",
+    "unassigned": "Sans configuration ({count})",
+    "none_left": "Tous les équipements éligibles sont déjà sur cette configuration."
+  },
   "dashboard": {
     "title": "Tableau de bord",
     "status": {

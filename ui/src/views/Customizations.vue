@@ -373,6 +373,7 @@ onMounted(refresh);
       :rule="edit.rule.value"
       :device="edit.device.value"
       :shared-devices="edit.sharedDevices.value"
+      :fleet="devices"
       :saving="edit.saving.value"
       @save="edit.onSave"
     />

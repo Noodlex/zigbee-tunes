@@ -103,6 +103,14 @@
     "scope_all": "the {count} devices sharing it",
     "scope_device_hint": "it will become a separate configuration"
   },
+  "picker": {
+    "title": "Also apply to",
+    "assigned": "Already on this configuration ({count})",
+    "elsewhere": "On another configuration ({count}) — ticking one moves it here",
+    "leaving": "leaves {config}",
+    "unassigned": "Without a configuration ({count})",
+    "none_left": "Every eligible device is already on this configuration."
+  },
   "dashboard": {
     "title": "Dashboard",
     "status": {
