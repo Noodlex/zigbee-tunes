@@ -18,7 +18,7 @@ a **consistent, harmonized view** of a mixed-brand fleet, while your
 physical Zigbee devices are never modified.
 
 <p align="center">
-  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — Devices view" width="820">
+  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — Devices: multi-select and the bulk editor bounded by the selection's native range" width="820">
 </p>
 
 ## Why
@@ -44,17 +44,36 @@ automation engine.
   areas), `entity-rename` (safe display-name override).
 - **Six targeting patterns** — `*`, `<ieee>`, `@vendor:`, `@group:`,
   `@model:`, `@friendlyname:` (with `*` prefix match).
-- **Web UI** (through HA Ingress) — Devices grid with multi-select and a
-  live "safe intersection" hint when bulk-editing color temperature;
-  Customizations ledger with one-click undo; Dashboard with connection
-  status and fleet breakdown. English/French, dark/light, responsive.
+- **Configurations, not just rules** — devices normalized identically share a
+  configuration and a colour throughout the UI. Change one and every device
+  using it follows; or split a single device off into a configuration of its
+  own, without leaving the dialog.
+- **Ranges on a slider**, bounded by what the targeted devices actually
+  support, in mireds **or as a percentage**. The span every one of them can
+  honour is drawn on the track, so you can see what a bound costs before
+  committing to it.
+- **Assign from the editor** — the dialog that defines a configuration also
+  lists the fleet, separating devices that would *move off* another
+  configuration from those that have none. Applying a rule drops a device from
+  its previous one of the same type, and that shows.
+- **Web UI** (through HA Ingress) — Devices grid with multi-select and
+  capability filters; Customizations ledger with one-click undo; Dashboard
+  with connection status, recent activity and a fleet breakdown.
+  English/French, dark/light, responsive.
 - **Atomic smart-apply** — applying a rule replaces any existing rule of
   the same type for that device (no duplicate accretion).
 - **Reliable** — per-topic discovery cache so a rule change reaches the
   right entity without waiting for a Z2M restart.
 
 <p align="center">
-  <img src="docs/screenshots/edit.png" alt="Bulk-editing color temperature with native-range hints" width="820">
+  <img src="docs/screenshots/edit.png" alt="Editing a configuration: a slider bounded by the devices' native range, the safe intersection, and the fleet listed for assignment" width="820">
+</p>
+
+Every distinct configuration is listed with the devices using it, so a fleet
+normalized three different ways reads as three lines rather than forty:
+
+<p align="center">
+  <img src="docs/screenshots/customizations.png" alt="Customizations: each configuration in use, colour-coded, with the devices on it" width="820">
 </p>
 
 ## Install

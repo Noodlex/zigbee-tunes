@@ -18,7 +18,7 @@ republie. Home Assistant obtient une **vue cohérente et harmonisée** d'un
 parc multi-marques, sans jamais modifier tes appareils Zigbee physiques.
 
 <p align="center">
-  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — vue Devices" width="820">
+  <img src="docs/screenshots/devices.png" alt="Zigbee Tunes — Devices : sélection multiple et éditeur groupé borné par la plage native de la sélection" width="820">
 </p>
 
 ## Pourquoi
@@ -45,18 +45,36 @@ pas tes appareils et n'est pas un moteur d'automatisation.
   pièces HA), `entity-rename` (renommage d'affichage sans casse).
 - **Six patterns de ciblage** — `*`, `<ieee>`, `@vendor:`, `@group:`,
   `@model:`, `@friendlyname:` (avec match par préfixe `*`).
+- **Des configurations, pas seulement des règles** — les appareils normalisés
+  à l'identique partagent une configuration et une couleur dans toute l'UI.
+  En modifier une suit tous ceux qui l'utilisent ; ou détacher un seul
+  appareil dans une configuration à lui, sans quitter le dialogue.
+- **Des plages sur un curseur**, borné par ce que les appareils visés
+  supportent réellement, en mireds **ou en pourcentage**. L'intervalle que
+  tous peuvent honorer est dessiné sur la piste : on voit ce qu'une borne
+  coûte avant de la valider.
+- **Assigner depuis l'éditeur** — le dialogue qui définit une configuration
+  liste aussi le parc, en séparant les appareils qui *quitteraient* une autre
+  configuration de ceux qui n'en ont aucune. Appliquer une règle retire
+  l'appareil de sa précédente du même type, et ça se voit.
 - **UI web** (via HA Ingress) — grille Devices avec sélection multiple et
-  aide « intersection sûre » en édition groupée de température de couleur ;
-  registre Customizations avec annulation en un clic ; Dashboard avec statut
-  de connexion et répartition du parc. Anglais/français, dark/light,
-  responsive.
+  filtres par capacité ; registre Customizations avec annulation en un clic ;
+  Dashboard avec statut de connexion, activité récente et répartition du parc.
+  Anglais/français, dark/light, responsive.
 - **Smart-apply atomique** — appliquer une règle remplace toute règle
   existante du même type pour cet appareil (pas d'accumulation de doublons).
 - **Fiable** — cache de discovery par topic : un changement de règle
   atteint la bonne entité sans attendre un redémarrage de Z2M.
 
 <p align="center">
-  <img src="docs/screenshots/edit.png" alt="Édition groupée de la température de couleur avec les plages natives" width="820">
+  <img src="docs/screenshots/edit.png" alt="Édition d'une configuration : curseur borné par la plage native des appareils, intersection sûre, et le parc listé pour l'assignation" width="820">
+</p>
+
+Chaque configuration distincte est listée avec les appareils qui l'utilisent :
+un parc normalisé de trois façons se lit en trois lignes plutôt qu'en quarante.
+
+<p align="center">
+  <img src="docs/screenshots/customizations.png" alt="Customizations : chaque configuration en usage, avec sa couleur et ses appareils" width="820">
 </p>
 
 ## Installation
