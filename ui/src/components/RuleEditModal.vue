@@ -9,12 +9,7 @@ import { NModal, NRadioButton, NRadioGroup, NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import RuleEditFields from './RuleEditFields.vue';
 import DeviceAssignPicker from './DeviceAssignPicker.vue';
-import {
-  isRangeOrdered,
-  ruleSignature,
-  specificRulesFor,
-  type RuleValues,
-} from '../utils/rules';
+import { isRangeOrdered, ruleSignature, specificRulesFor } from '../utils/rules';
 import type { AppliedRule, Device } from '../api/types';
 
 const props = defineProps<{
@@ -166,10 +161,7 @@ const targetDevices = computed<Device[]>(() => {
 const removals = computed<{ rule: AppliedRule; ieees: string[] }[]>(() => {
   if (!canRemove.value || !props.rule) return [];
   const keep = new Set(picked.value.map((i) => i.toLowerCase()));
-  // The rule to take them OFF is the one they actually hold — the
-  // configuration as it was opened. `sig` follows the fields being edited and
-  // would name a configuration these devices are not on.
-  const held = ruleSignature(props.rule);
+  const held = sig.value;
   const byRule = new Map<number, { rule: AppliedRule; ieees: string[] }>();
   for (const device of props.sharedDevices) {
     if (keep.has(device.ieee.toLowerCase())) continue;
@@ -193,24 +185,24 @@ const removals = computed<{ rule: AppliedRule; ieees: string[] }[]>(() => {
  * A type whose value is unique per device (entity-rename) has no signature and
  * nothing to assign.
  */
-const sig = computed(() => {
-  const rule = props.rule;
-  if (!rule) return null;
-  const draft: RuleValues = { type: rule.type };
-  switch (rule.type) {
-    case 'color-temp-range':
-      if (min.value !== null) draft.min_mireds = min.value;
-      if (max.value !== null) draft.max_mireds = max.value;
-      break;
-    case 'brightness-range':
-      if (scale.value !== null) draft.max_scale = scale.value;
-      break;
-    case 'suggested-area':
-      draft.area = text.value.trim();
-      break;
-  }
-  return ruleSignature(draft);
-});
+/**
+ * The configuration as the dialog opened on it — NOT the values being typed.
+ *
+ * Membership is the question the picker answers, and membership is defined by
+ * the rule these devices actually hold. Deriving it from the draft instead made
+ * the members fall out of "already here" the moment a bound was edited: they
+ * reappeared under "on another configuration", labelled as leaving the very
+ * configuration they were on, while still ticked for removal.
+ *
+ * The cost is a cosmetic one, accepted knowingly: draft values matching some
+ * other configuration still show its devices as a move rather than as already
+ * arrived. That move is a no-op, and saying so wrongly is far cheaper than
+ * inverting what the removal checkboxes mean.
+ *
+ * A type whose value is unique per device (entity-rename) has no signature and
+ * nothing to assign.
+ */
+const sig = computed(() => (props.rule ? ruleSignature(props.rule) : null));
 
 const canAssign = computed(
   () => sig.value !== null && (props.fleet?.length ?? 0) > 0,
