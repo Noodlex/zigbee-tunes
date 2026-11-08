@@ -24,6 +24,28 @@ follows [Semantic Versioning](https://semver.org/).
   - `@types/node` stays on the 24 line, for the same reason as in 1.4.1: the
     images and CI run Node 24.
 
+### Under the hood
+- A packaging test holds `engines.node` to what every **direct** dependency
+  actually allows. The declared range had drifted twice in three months, both
+  times caught by someone reading a diff. Neither drift broke anything here —
+  CI and both images run one fixed Node — they break for whoever trusts the
+  range and installs on a version nobody tested, which is why nothing surfaced
+  them. Verified by mutation: put either drift back and the test fails, naming
+  the dependencies responsible.
+- CI moves to `actions/checkout@v7` and `actions/setup-node@v7`. Both were three
+  majors behind, and the reason to move is the runner rather than novelty: v4
+  declares `runs.using: node20`, the action runtime GitHub is retiring. Left
+  alone, CI would have broken the day it goes, all at once.
+- Yarn 4.18.0 -> 4.18.1 in both packages, which must stay in lockstep.
+- Dependabot watches the GitHub Actions monthly, so that drift cannot repeat
+  unseen. npm is deliberately left out: both `package.json` files are kept at
+  the top of their ranges by hand, and the `^` bounds already absorb patch and
+  minor releases.
+- CONTRIBUTING records why the UI cannot move to TypeScript 7. `vue-tsc`
+  advertises `typescript >=5.0.0`, which numerically admits 7; the real bound
+  lives one level down in `@volar/typescript` and is explicit: `<7`. Yarn prints
+  it at install time, before anything runs.
+
 ## 1.4.1 — Dependency refresh
 
 ### Changed
