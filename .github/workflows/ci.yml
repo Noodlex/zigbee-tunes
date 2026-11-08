@@ -9,11 +9,11 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Node 24 matches the Docker images and the standalone runtime.
       # node:sqlite (used by the DB layer and its tests) is flagless here.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
