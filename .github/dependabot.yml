@@ -1,17 +1,21 @@
 # Dependabot — version updates.
 #
-# Scope is deliberately narrow: GitHub Actions only.
+# Two ecosystems, each for a drift nothing else catches.
 #
-# Actions are the one ecosystem here that drifts unseen. `actions/checkout` and
-# `actions/setup-node` sat three majors behind until someone went looking, and
-# nothing would have surfaced it: there was no vulnerability, just a stale
-# `runs.using: node20` waiting for GitHub to retire it.
+# GitHub Actions drift unseen. `actions/checkout` and `actions/setup-node` sat
+# three majors behind until someone went looking, and nothing would have
+# surfaced it: there was no vulnerability, just a stale `runs.using: node20`
+# waiting for GitHub to retire it.
 #
-# npm is left out on purpose. Both package.json files are kept at the top of
-# their ranges by hand, and the `^` bounds already absorb patch and minor
-# releases — Dependabot would mostly open pull requests for upgrades the
-# lockfile is free to take anyway, across two packages. Worth revisiting if the
-# project is ever left alone for a few months.
+# npm drifts too, which is less obvious. A `^` bound *permits* a newer version;
+# it does not pull one. The lockfile stays where it was resolved until someone
+# re-runs an install that re-resolves — and CI installs with `--immutable`, so
+# it never does. Two months of that left fifteen packages behind inside their
+# own ranges: fastify pinned at 5.12.1 with 5.12.8 published, vue-i18n at
+# 11.4.8 with 11.4.18 published. The ranges had absorbed nothing at all.
+#
+# Updates are grouped: one pull request per package per month, rather than one
+# per dependency. The point is to see the drift, not to triage it.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -22,3 +26,56 @@ updates:
       prefix: chore(ci)
     labels:
       - dependencies
+
+  # Majors are excluded from the npm entries — and deliberately NOT from the
+  # Actions one above, where a major is precisely the drift worth seeing.
+  #
+  # An npm major is a decision rather than an update: it needs someone to read
+  # a changelog and run the thing. An Action major is usually a runtime bump
+  # GitHub will eventually force anyway.
+  #
+  # Two npm majors are live right now, both settled deliberately, and both of
+  # which Dependabot would otherwise reopen every month:
+  #
+  #   @types/node  must track the Node major the images actually run (24).
+  #                Typing against 26 would let code compile against APIs the
+  #                runtime does not have.
+  #   typescript   in ui/ is held below 7 by @volar/typescript, which caps at
+  #                `<7.0.0-0` via vue-tsc. See CONTRIBUTING for the mechanism.
+  #
+  # Lifting this line means taking those two back on, so read them first.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(deps)
+    labels:
+      - dependencies
+    groups:
+      backend:
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
+
+  # The UI is a separate package with its own lockfile, so it needs its own
+  # entry — a single npm entry at the root would never look inside it.
+  - package-ecosystem: npm
+    directory: /ui
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(deps)
+    labels:
+      - dependencies
+    groups:
+      ui:
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
