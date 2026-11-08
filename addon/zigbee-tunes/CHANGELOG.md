@@ -4,6 +4,22 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.4.1 — Dependency refresh
+
+### Changed
+- Dependencies brought up to date **within their current major versions**, so
+  nothing about how the app behaves changes. Backend: `fastify` 5.12.8,
+  `@fastify/cors` 11.4.1, `@fastify/static` 10.1.10, `mqtt` 5.16.1, `winston`
+  3.19.0, `yaml` 2.9.1, plus `tsx`, `vitest` and `@types/node` on the dev side.
+  UI: `vite` 8.3.6, `vue` 3.5.45, `vue-router` 5.4.0, `vue-i18n` 11.4.18,
+  `naive-ui` 2.45.3, `@vitejs/plugin-vue` 6.0.10, `vue-tsc` 3.3.14.
+
+  Two majors were deliberately left out. `@types/node` stays on the 24 line
+  because the images and CI run Node 24: typing against Node 26 would let code
+  compile against APIs the runtime does not have. `vitest` 5 is a test-runner
+  major with no effect on what ships, and belongs in a change of its own rather
+  than in a patch release.
+
 ## 1.4.0 — Take a device off a configuration, and see the rules that do nothing
 
 ### Added
