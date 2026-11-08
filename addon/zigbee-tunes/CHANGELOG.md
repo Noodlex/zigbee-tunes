@@ -4,6 +4,37 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.4.4 — Patched versions for 44 advisories
+
+### Changed
+- **Six transitive packages moved to patched versions.** GitHub was reporting 73
+  open Dependabot alerts, 2 of them critical. Every one of the 44 distinct
+  advisories is patched within the same major, so this is a lockfile change
+  only: no declared range moves, and neither `package.json` is touched.
+
+  - `fast-uri` 3.1.2 → 3.1.9 and 4.1.2 → 4.2.3, from fastify by way of `ajv`
+    and `fast-json-stringify`
+  - `ip-address` 10.2.0 → 10.7.6 and `ws` 8.20.1 → 8.22.1, both from `mqtt`
+  - `esbuild` 0.28.0 → 0.28.2, from `tsx`, the dev runner
+  - `tar` 7.5.15 → 7.5.22 and `undici` 6.25.0 → 6.29.1, from `fsevents` by way
+    of `node-gyp`
+
+  **None of it was a live exploit path here**, and that is worth recording so
+  the next reader does not have to re-derive it. `tar` and `undici` carry both
+  criticals and 42 of the 73 alerts, and they hang off `fsevents`, which the
+  lockfiles declare `conditions: os=darwin` — so they are never installed on
+  Linux or Windows at all; verified by their absence from `node_modules`. The
+  `esbuild` advisory needs a development server running on Windows, and `tsx`
+  does not run one. What remains parses our own JSON schemas and our own broker
+  URL, not anything a stranger supplies.
+
+  They are moved anyway, because Dependabot reads the lockfile rather than the
+  install, and 73 standing alerts are how a real one gets missed.
+
+  Nothing about how the add-on behaves changes. The version is bumped because
+  the Supervisor only offers an update when `config.yaml` says so, and
+  `fast-uri`, `ip-address` and `ws` do ship in the image.
+
 ## 1.4.3 — Survive a broker that restarts, or is not listening yet
 
 ### Fixed
