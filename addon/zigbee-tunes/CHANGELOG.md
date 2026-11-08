@@ -4,6 +4,26 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.4.2 — Dependency refresh
+
+### Changed
+- Lockfiles deduplicated in both packages. Every direct dependency was already
+  at the top of its declared range, so **no version range moved**; what changed
+  is the transitive graph, where 4 backend and 25 UI packages were pinned to
+  older copies of versions already allowed. Both lockfiles shrink accordingly.
+  Nothing about how the app behaves changes.
+
+  Two majors were deliberately left out:
+
+  - `typescript` stays on the 5.x line **in the UI package**. The backend is
+    already on 7, and `vue-tsc` declares `typescript >=5.0.0`, so 7 looks
+    allowed — but `vue-tsc` 3.3.14 resolves the `tsc` binary through an internal
+    path that TypeScript 7 no longer exports, and `yarn build` dies with
+    `ERR_PACKAGE_PATH_NOT_EXPORTED`. To be revisited when `vue-tsc` ships
+    TypeScript 7 support.
+  - `@types/node` stays on the 24 line, for the same reason as in 1.4.1: the
+    images and CI run Node 24.
+
 ## 1.4.1 — Dependency refresh
 
 ### Changed
