@@ -102,6 +102,48 @@ They look identical to the warnings reported in #5. Before assuming a
 regression, check whether the file is tracked: `git ls-files --error-unmatch
 <path>`.
 
+## Why the two packages are on different TypeScript versions
+
+The backend runs **TypeScript 7** (the native compiler); the UI is pinned to
+**5.9.3**. That looks like neglect. It is not — the UI is held there by
+`vue-tsc`, and it has been retried.
+
+`vue-tsc` starts by resolving the compiler it is going to drive:
+
+```js
+// node_modules/vue-tsc/index.js
+function resolveTscPath(tscPath = require.resolve('typescript/lib/tsc')) {
+```
+
+TypeScript 5 ships **no `exports` map**, so that subpath resolves and the call
+works. TypeScript 7 added one, and `./lib/tsc` is not in it — the Go port does
+not ship that entry point at all. The result is immediate and total:
+
+```
+Error [ERR_PACKAGE_PATH_NOT_EXPORTED]: Package subpath './lib/tsc' is not
+defined by "exports" in .../typescript/package.json
+```
+
+`vue-tsc`'s own peer range reads `typescript: ">=5.0.0"`, which looks
+permissive enough to admit 7. **It is not evidence.** The real constraint lives
+one level down, in `@volar/typescript`, and is explicit:
+
+```
+typescript is listed by your project with version 7.0.2, which doesn't satisfy
+what @volar/typescript (via vue-tsc) and other dependencies request
+(>=5.0.0 <7.0.0-0)
+```
+
+Yarn prints that at install time, before anything is run.
+
+**Before retrying:** check whether `@volar/typescript` has lifted its upper
+bound. If it still caps below 7, nothing else matters — the peer range is the
+maintainers saying the work is not done. `vue-tsc` carries a branch for a
+`@typescript/typescript6` alias package, so the seam exists; there is simply
+nothing equivalent for 7 yet.
+
+Last checked: 2026-11-08, `vue-tsc` 3.3.14, still blocked.
+
 ## Before opening a pull request
 
 Both must be green — CI runs them on every PR:
