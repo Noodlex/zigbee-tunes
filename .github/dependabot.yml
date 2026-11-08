@@ -1,0 +1,24 @@
+# Dependabot — version updates.
+#
+# Scope is deliberately narrow: GitHub Actions only.
+#
+# Actions are the one ecosystem here that drifts unseen. `actions/checkout` and
+# `actions/setup-node` sat three majors behind until someone went looking, and
+# nothing would have surfaced it: there was no vulnerability, just a stale
+# `runs.using: node20` waiting for GitHub to retire it.
+#
+# npm is left out on purpose. Both package.json files are kept at the top of
+# their ranges by hand, and the `^` bounds already absorb patch and minor
+# releases — Dependabot would mostly open pull requests for upgrades the
+# lockfile is free to take anyway, across two packages. Worth revisiting if the
+# project is ever left alone for a few months.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(ci)
+    labels:
+      - dependencies
