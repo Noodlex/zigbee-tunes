@@ -47,6 +47,7 @@ export class Proxy {
 
   start(): void {
     this.mqtt.onMessage((topic, payload) => this.handleMessage(topic, payload));
+    this.mqtt.onReconnect(() => this.forgetWhatWasPublished());
     this.mqtt.subscribe(this.bridgeDevicesSub);
     this.mqtt.subscribe(this.bridgeGroupsSub);
     this.mqtt.subscribe(this.discoverySub);
@@ -56,6 +57,31 @@ export class Proxy {
       source: this.cfg.topics.source,
       target: this.cfg.topics.target,
     });
+  }
+
+  /**
+   * Drops the anti-loop cache, so the next payload for a topic is republished
+   * even when it is byte-identical to the last one sent.
+   *
+   * The cache answers "did I already publish this?", and the honest answer
+   * after a reconnection is "no idea". A broker that died brutally rolls its
+   * retained messages back to its last autosave — up to half an hour with
+   * Mosquitto's default — while this process keeps running and keeps
+   * remembering. Z2M then republishes its discovery configs, the pipeline
+   * produces the same bytes as before, the cache recognises them, and nothing
+   * is sent. The retained topics stay missing.
+   *
+   * Nobody notices: Home Assistant holds its entities in memory. They vanish
+   * at its next restart, long after the cause, and the payloads were in
+   * `payload_cache` the whole time — it was this Map refusing to let them out.
+   *
+   * The cost of being wrong the other way is one republication of N retained
+   * configs per reconnection: idempotent, and reconnections are rare.
+   */
+  private forgetWhatWasPublished(): void {
+    const forgotten = this.lastPublishedByTopic.size;
+    this.lastPublishedByTopic.clear();
+    this.logger.info('publish cache cleared after reconnect', { forgotten });
   }
 
   /**

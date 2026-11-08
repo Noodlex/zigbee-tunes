@@ -4,9 +4,18 @@ import type { Logger } from '../logger.js';
 
 export type MessageHandler = (topic: string, payload: Buffer) => void;
 
+/**
+ * Called after a RECONNECTION, never after the first connect. Anything a
+ * listener cached about what the broker holds may be stale: the broker can
+ * have died brutally and rolled its retained messages back to its last
+ * autosave, while this process kept running and remembers publishing them.
+ */
+export type ReconnectHandler = () => void;
+
 export class ZigbeeTunesMqttClient {
   private client: MqttClient | null = null;
   private readonly handlers: MessageHandler[] = [];
+  private readonly reconnectHandlers: ReconnectHandler[] = [];
   private readonly subscriptions = new Set<string>();
   private _connectedAt: number | null = null;
   private _lastReconnectAt: number | null = null;
@@ -75,6 +84,15 @@ export class ZigbeeTunesMqttClient {
           this._lastReconnectAt = Date.now();
           this._reconnectCount++;
           this.logger.info('mqtt reconnected', { url: this.cfg.url, resubscribed: this.subscriptions.size });
+          for (const h of this.reconnectHandlers) {
+            try {
+              h();
+            } catch (err) {
+              // Same contract as the message handlers: one listener throwing
+              // must not take the connection down with it.
+              this.logger.error('reconnect handler threw', { err: (err as Error).message });
+            }
+          }
         }
       });
 
@@ -128,6 +146,11 @@ export class ZigbeeTunesMqttClient {
 
   onMessage(handler: MessageHandler): void {
     this.handlers.push(handler);
+  }
+
+  /** Registers a listener for reconnections only — see ReconnectHandler. */
+  onReconnect(handler: ReconnectHandler): void {
+    this.reconnectHandlers.push(handler);
   }
 
   async end(): Promise<void> {
