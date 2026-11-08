@@ -42,6 +42,12 @@ follows [Semantic Versioning](https://semver.org/).
   not a reason to restart, the client is already retrying, and restarting would
   only throw that retry away.
 
+### Under the hood
+- Dependabot now watches npm as well as the GitHub Actions, grouped and
+  monthly. A `^` bound permits a newer release; it does not pull one, and CI
+  installs with `--immutable` so nothing ever re-resolves. Majors stay out:
+  they are decisions rather than updates.
+
 ## 1.4.2 — Dependency refresh
 
 ### Changed
