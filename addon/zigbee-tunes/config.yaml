@@ -31,6 +31,16 @@ panel_icon: mdi:tune
 panel_title: Zigbee Tunes
 panel_admin: true
 
+# Health probe. The Supervisor substitutes the effective port for the internal
+# one, so 8099 is right here even when the host mapping differs.
+#
+# /api/health answers 200 whether MQTT is up or down — it reports `degraded`
+# in the body rather than failing. That is deliberate: a broker being away is
+# not a reason to restart us, the client retries on its own every 5s, and
+# restarting would only throw away the retry. The watchdog is there for the
+# case nothing else covers — the process gone or wedged, with no one to notice.
+watchdog: http://[HOST]:[PORT:8099]/api/health
+
 # Optional direct port exposure on the host network (handy for local API
 # scripts / curl during dev). Comment out to lock to ingress-only.
 ports:

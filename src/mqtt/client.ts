@@ -48,6 +48,25 @@ export class ZigbeeTunesMqttClient {
     return this.cfg.url;
   }
 
+  /**
+   * Starts the client and returns once it is wired — NOT once it is connected.
+   *
+   * It used to reject when the first connection attempt failed, and the caller
+   * let that end the process. That is wrong on the one occasion it happens: a
+   * host reboot, where the broker and this add-on start together and the
+   * broker is simply not listening yet. `services: mqtt:need` guarantees a
+   * broker is configured, not that it answers. Nothing restarts us, so the
+   * add-on stayed down until someone noticed.
+   *
+   * Every later disconnection was already handled correctly — reconnectPeriod
+   * retries every 5s forever. The first attempt was the lone exception; now it
+   * follows the same loop.
+   *
+   * Returning early is also what makes a watchdog possible: the API server
+   * starts after this call, and a watchdog that probes an HTTP port which
+   * never opens would restart the add-on in a loop. /api/health reports
+   * `degraded` while MQTT is down, which is the honest answer.
+   */
   async connect(): Promise<void> {
     const opts: IClientOptions = {
       clientId: this.cfg.client_id ?? `zigbee-tunes-${Date.now()}`,
@@ -58,74 +77,68 @@ export class ZigbeeTunesMqttClient {
       clean: true,
     };
 
-    return new Promise((resolve, reject) => {
-      const client = mqtt.connect(this.cfg.url, opts);
+    const client = mqtt.connect(this.cfg.url, opts);
 
-      // Flag to ensure the initial Promise is resolved/rejected only once.
-      // 'connect' and 'error' can fire several times during the client
-      // lifecycle (auto reconnects, intermittent network errors).
-      let firstResolved = false;
+    // Tells the first successful connection from the ones that follow: the
+    // 'connect' event fires on every reconnect and the two mean different
+    // things to anyone listening.
+    let connectedOnce = false;
 
-      // We listen for EVERY 'connect' event (not .once). On each
-      // (re)connect we replay the subscriptions because with `clean: true`
-      // the broker does not preserve the session.
-      client.on('connect', () => {
-        for (const topic of this.subscriptions) {
-          client.subscribe(topic, { qos: 1 }, (err) => {
-            if (err) this.logger.error('mqtt subscribe error on (re)connect', { topic, err: err.message });
-          });
-        }
-        if (!firstResolved) {
-          firstResolved = true;
-          this._connectedAt = Date.now();
-          this.logger.info('mqtt connected', { url: this.cfg.url });
-          resolve();
-        } else {
-          this._lastReconnectAt = Date.now();
-          this._reconnectCount++;
-          this.logger.info('mqtt reconnected', { url: this.cfg.url, resubscribed: this.subscriptions.size });
-          for (const h of this.reconnectHandlers) {
-            try {
-              h();
-            } catch (err) {
-              // Same contract as the message handlers: one listener throwing
-              // must not take the connection down with it.
-              this.logger.error('reconnect handler threw', { err: (err as Error).message });
-            }
-          }
-        }
-      });
-
-      client.on('reconnect', () => {
-        this.logger.warn('mqtt reconnecting');
-      });
-
-      client.on('error', (err) => {
-        this.logger.error('mqtt error', { err: err.message });
-        // If we never managed to connect, this is a fatal error (typically
-        // bad credentials or an invalid URL) -> reject once.
-        if (!firstResolved) {
-          firstResolved = true;
-          reject(err);
-        }
-      });
-
-      client.on('close', () => {
-        this.logger.warn('mqtt connection closed');
-      });
-
-      client.on('message', (topic, payload) => {
-        for (const h of this.handlers) {
+    // We listen for EVERY 'connect' event (not .once). On each (re)connect we
+    // replay the subscriptions because with `clean: true` the broker does not
+    // preserve the session.
+    client.on('connect', () => {
+      for (const topic of this.subscriptions) {
+        client.subscribe(topic, { qos: 1 }, (err) => {
+          if (err) this.logger.error('mqtt subscribe error on (re)connect', { topic, err: err.message });
+        });
+      }
+      if (!connectedOnce) {
+        connectedOnce = true;
+        this._connectedAt = Date.now();
+        this.logger.info('mqtt connected', { url: this.cfg.url });
+      } else {
+        this._lastReconnectAt = Date.now();
+        this._reconnectCount++;
+        this.logger.info('mqtt reconnected', { url: this.cfg.url, resubscribed: this.subscriptions.size });
+        for (const h of this.reconnectHandlers) {
           try {
-            h(topic, payload);
+            h();
           } catch (err) {
-            this.logger.error('handler threw', { topic, err: (err as Error).message });
+            // Same contract as the message handlers: one listener throwing
+            // must not take the connection down with it.
+            this.logger.error('reconnect handler threw', { err: (err as Error).message });
           }
         }
-      });
-
-      this.client = client;
+      }
     });
+
+    client.on('reconnect', () => {
+      this.logger.warn('mqtt reconnecting');
+    });
+
+    // Never fatal. Bad credentials and an absent broker look the same here,
+    // and both are better reported through /api/health than by exiting: one
+    // is fixed in the add-on options, the other fixes itself.
+    client.on('error', (err) => {
+      this.logger.error('mqtt error', { err: err.message });
+    });
+
+    client.on('close', () => {
+      this.logger.warn('mqtt connection closed');
+    });
+
+    client.on('message', (topic, payload) => {
+      for (const h of this.handlers) {
+        try {
+          h(topic, payload);
+        } catch (err) {
+          this.logger.error('handler threw', { topic, err: (err as Error).message });
+        }
+      }
+    });
+
+    this.client = client;
   }
 
   subscribe(topic: string): void {
@@ -153,10 +166,39 @@ export class ZigbeeTunesMqttClient {
     this.reconnectHandlers.push(handler);
   }
 
+  /**
+   * Closes the connection, gracefully if it can and forcibly if it must.
+   *
+   * A graceful close waits for queued packets to reach the broker. With no
+   * broker they never do, and the callback never fires — shutdown would then
+   * hang before `db.close()`, waiting for a SIGKILL. That is exactly the
+   * situation this client is now built to survive, so it must not be the one
+   * that stops it from stopping.
+   *
+   * Anything dropped by a forced close is a discovery republication, rebuilt
+   * from `payload_cache` on the next start.
+   */
   async end(): Promise<void> {
-    if (!this.client) return;
-    return new Promise((resolve) => {
-      this.client!.end(false, {}, () => resolve());
+    const client = this.client;
+    if (!client) return;
+
+    const GRACE_MS = 2000;
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        this.logger.warn('mqtt did not close gracefully, forcing', { after_ms: GRACE_MS });
+        client.end(true, {}, done);
+        // A forced close can keep its callback to itself; do not wait on it.
+        done();
+      }, GRACE_MS);
+      timer.unref?.();
+      client.end(false, {}, done);
     });
   }
 }
