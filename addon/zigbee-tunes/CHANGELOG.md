@@ -4,6 +4,50 @@ All notable changes to Zigbee Tunes are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project
 follows [Semantic Versioning](https://semver.org/).
 
+## 1.4.3 — Survive a broker that restarts, or is not listening yet
+
+### Fixed
+- **Entities no longer vanish after the broker restarts.** The anti-loop cache
+  answers "did I already publish this?", and after a reconnection the honest
+  answer is "no idea" — it kept answering "yes". A broker that dies brutally
+  rolls its retained messages back to its last autosave (up to half an hour with
+  Mosquitto's default). Z2M then republishes its discovery configs, the pipeline
+  produces the same bytes, the cache recognises them, and nothing is sent: the
+  target topics stay empty.
+
+  Nobody notices, which is the worst part. Home Assistant holds its entities in
+  memory, so everything looks fine until its next restart — at which point they
+  disappear with no visible cause, long after the event that caused it. The
+  payloads were in `payload_cache` the whole time. The cache is now cleared on
+  reconnection, at the cost of one idempotent republication.
+
+- **The add-on no longer stays down when the broker is not listening yet.** A
+  host reboot starts the broker and this add-on together, and the broker is not
+  always ready first; `services: mqtt:need` guarantees one is configured, not
+  that it answers. The first connection attempt rejected, the process exited,
+  and nothing restarted it — the add-on stayed down until someone noticed. Every
+  *later* disconnection was already handled by retrying every 5s. The first
+  attempt was the lone exception, and it now follows the same loop.
+
+- **Shutdown no longer hangs when the broker is gone.** Closing gracefully waits
+  for queued packets to reach the broker; with no broker they never do, and the
+  stop hung until the Supervisor killed it. It now falls back to a forced close
+  after 2s. What that drops is a discovery republication, rebuilt from
+  `payload_cache` on the next start.
+
+### Added
+- A **watchdog** on `/api/health`, so the Supervisor restarts the add-on if the
+  process is gone or wedged. The endpoint answers 200 whether MQTT is up or
+  down, reporting `degraded` in the body — deliberately: a broker being away is
+  not a reason to restart, the client is already retrying, and restarting would
+  only throw that retry away.
+
+### Under the hood
+- Dependabot now watches npm as well as the GitHub Actions, grouped and
+  monthly. A `^` bound permits a newer release; it does not pull one, and CI
+  installs with `--immutable` so nothing ever re-resolves. Majors stay out:
+  they are decisions rather than updates.
+
 ## 1.4.2 — Dependency refresh
 
 ### Changed
