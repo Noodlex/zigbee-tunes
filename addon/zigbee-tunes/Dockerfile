@@ -58,7 +58,7 @@ WORKDIR /ui
 RUN corepack enable
 COPY --from=source /src/ui ./
 COPY --from=source /src/.commit-sha /commit-sha
-RUN yarn install --immutable || yarn install
+RUN yarn install --immutable
 RUN ZIGBEE_TUNES_COMMIT_SHA="$(cat /commit-sha)" yarn build
 
 # ---- Stage 4: runtime ----

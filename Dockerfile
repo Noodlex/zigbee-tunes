@@ -30,7 +30,7 @@ WORKDIR /ui
 RUN corepack enable
 
 COPY ui/package.json ui/yarn.lock* ui/.yarnrc.yml* ./
-RUN yarn install --immutable || yarn install
+RUN yarn install --immutable
 
 COPY ui/ ./
 RUN yarn build
