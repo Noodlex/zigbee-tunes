@@ -41,3 +41,30 @@ jobs:
       - name: Build UI
         run: yarn build
         working-directory: ui
+
+  # Neither image is built anywhere else before it reaches a user. The app
+  # declares no `image:` in config.yaml, so the Supervisor builds its
+  # Dockerfile on each installation: a mistake in it surfaces as a failed
+  # install on someone else's machine. Built here, never pushed.
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build standalone image
+        run: docker build --build-arg COMMIT_SHA="${GITHUB_SHA::7}" -t zigbee-tunes:ci .
+
+      # The Supervisor's build context is addon/zigbee-tunes/, so that
+      # Dockerfile cannot COPY the sources: it clones them from GitHub at
+      # ZIGBEE_TUNES_REF. Point it at the branch under review, otherwise a PR
+      # would build main's sources and prove nothing about its own.
+      # A fork's branch does not exist in this repository, so a fork PR falls
+      # back to main: its Dockerfile is still exercised, its sources are not.
+      - name: Build Home Assistant app image
+        env:
+          SOURCE_REF: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || 'main' }}
+        run: >-
+          docker build
+          --build-arg ZIGBEE_TUNES_REF="$SOURCE_REF"
+          -t zigbee-tunes-app:ci
+          addon/zigbee-tunes
